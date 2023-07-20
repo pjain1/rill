@@ -18,6 +18,7 @@ const (
 	ObjectTypeSource      ObjectType = 2
 	ObjectTypeModel       ObjectType = 3
 	ObjectTypeMetricsView ObjectType = 4
+	ObjectTypeModelMeta   ObjectType = 5
 )
 
 // CatalogStore is implemented by drivers capable of storing catalog info for a specific instance.
@@ -73,6 +74,14 @@ func (e *CatalogEntry) GetMetricsView() *runtimev1.MetricsView {
 	obj, ok := e.Object.(*runtimev1.MetricsView)
 	if !ok {
 		panic(fmt.Errorf("entry '%s' is not a metrics view", e.Name))
+	}
+	return obj
+}
+
+func (e *CatalogEntry) GetModelMeta() *runtimev1.ModelMeta {
+	obj, ok := e.Object.(*runtimev1.ModelMeta)
+	if !ok {
+		panic(fmt.Errorf("entry '%s' is not a model meta", e.Name))
 	}
 	return obj
 }

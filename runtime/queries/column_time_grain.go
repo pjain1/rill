@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/rilldata/rill/runtime/server"
+	"github.com/rilldata/rill/runtime/server/auth"
 	"io"
 	"reflect"
 
@@ -45,6 +47,30 @@ func (q *ColumnTimeGrain) UnmarshalResult(v any) error {
 }
 
 func (q *ColumnTimeGrain) Resolve(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+	return q.resolve(ctx, rt, instanceID, priority, "")
+}
+
+func (q *ColumnTimeGrain) ResolveRestricted(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+	if auth.GetClaims(ctx).IsRestrictedRole() {
+		// Check if the backing model has access policy
+
+		modelMeta, err := runtime.LookupModelMeta(ctx, rt, instanceID, q.TableName+"_meta")
+		if err != nil {
+			return err
+		}
+
+		evaluatedModel := auth.GetClaims(ctx).Evaluate(modelMeta, "restricted")
+
+		// role should come from the runtime request
+		if !evaluatedModel.Access {
+			return server.ErrForbidden
+		}
+		return q.resolve(ctx, rt, instanceID, priority, evaluatedModel.Filter)
+	}
+	return q.resolve(ctx, rt, instanceID, priority, "")
+}
+
+func (q *ColumnTimeGrain) resolve(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int, filter string) error {
 	sampleSize := int64(500000)
 	cq := &TableCardinality{
 		TableName: q.TableName,
@@ -60,10 +86,14 @@ func (q *ColumnTimeGrain) Resolve(ctx context.Context, rt *runtime.Runtime, inst
 		useSample = fmt.Sprintf("USING SAMPLE %d ROWS", sampleSize)
 	}
 
+	if filter != "" {
+		filter = fmt.Sprintf("WHERE %s", filter)
+	}
+
 	estimateSQL := fmt.Sprintf(`
       WITH cleaned_column AS (
           SELECT %s as cd
-          from %s
+          from %s %s
           %s
       ),
       time_grains as (
@@ -99,6 +129,7 @@ func (q *ColumnTimeGrain) Resolve(ctx context.Context, rt *runtime.Runtime, inst
       `,
 		safeName(q.ColumnName),
 		safeName(q.TableName),
+		filter,
 		useSample,
 	)
 

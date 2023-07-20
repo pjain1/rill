@@ -22,8 +22,8 @@ export const initMeasuresColumns = (
     {
       name: "expression",
       label: "Expression",
-      ariaLabel: "Measure expression",
-      headerTooltip: "A valid SQL aggregation expression for this measure",
+      ariaLabel: "Measure evaluate",
+      headerTooltip: "A valid SQL aggregation evaluate for this measure",
       cellRenderer: new CellConfigInput(
         inputChangeHandler,
         (row) => ({

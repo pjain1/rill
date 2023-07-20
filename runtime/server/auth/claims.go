@@ -2,6 +2,8 @@ package auth
 
 import (
 	"github.com/golang-jwt/jwt/v4"
+	runtimev1 "github.com/rilldata/rill/proto/gen/rill/runtime/v1"
+	"github.com/rilldata/rill/runtime/server/evaluate"
 )
 
 // Claims resolves permissions for a requester.
@@ -12,13 +14,16 @@ type Claims interface {
 	Can(p Permission) bool
 	// CanInstance resolves instance-level permissions.
 	CanInstance(instanceID string, p Permission) bool
+	Evaluate(meta *runtimev1.ModelMeta, role string) *evaluate.EvaluatedModel
+	IsRestrictedRole() bool
 }
 
 // jwtClaims implements Claims and resolve permissions based on a JWT payload.
 type jwtClaims struct {
 	jwt.RegisteredClaims
-	System    []Permission            `json:"sys,omitempty"`
-	Instances map[string][]Permission `json:"ins,omitempty"`
+	System          []Permission            `json:"sys,omitempty"`
+	Instances       map[string][]Permission `json:"ins,omitempty"`
+	RestrictedRoles map[string]map[string]string
 }
 
 func (c *jwtClaims) Subject() string {
@@ -41,6 +46,48 @@ func (c *jwtClaims) CanInstance(instanceID string, p Permission) bool {
 		}
 	}
 	return c.Can(p)
+}
+
+func (c *jwtClaims) Evaluate(m *runtimev1.ModelMeta, role string) *evaluate.EvaluatedModel {
+	evaluatedModel := &evaluate.EvaluatedModel{}
+
+	if !c.IsRestrictedRole() || (m.Access.Condition == "") {
+		evaluatedModel.Access = true
+		return evaluatedModel
+	}
+
+	attrs := c.RestrictedRoles[role]
+	if attrs == nil {
+		return evaluatedModel
+	}
+
+	expr, err := evaluate.Template(m.Access.Condition, attrs)
+	// TODO: log error
+	if err != nil {
+		return nil
+	}
+
+	// evaluate model access
+	result, err := evaluate.Expr(expr)
+	if err != nil {
+		return nil
+	}
+	evaluatedModel.Access = result
+
+	// evaluate filter
+	if m.Access.Filter != "" {
+		evaluatedModel.Filter, err = evaluate.Template(m.Access.Filter, attrs)
+		if err != nil {
+			return nil
+		}
+	}
+	// TODO evaluate include/exclude columns
+
+	return evaluatedModel
+}
+
+func (c *jwtClaims) IsRestrictedRole() bool {
+	return len(c.RestrictedRoles) > 0
 }
 
 // openClaims implements Claims and allows all actions.
@@ -72,5 +119,13 @@ func (c anonClaims) Can(p Permission) bool {
 }
 
 func (c anonClaims) CanInstance(instanceID string, p Permission) bool {
+	return false
+}
+
+func (c anonClaims) Evaluate(m *runtimev1.ModelMeta, role string) *evaluate.EvaluatedModel {
+	return nil
+}
+
+func (c anonClaims) IsRestrictedRole() bool {
 	return false
 }

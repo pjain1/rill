@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-
 	runtimev1 "github.com/rilldata/rill/proto/gen/rill/runtime/v1"
 	"github.com/rilldata/rill/runtime/pkg/observability"
 	"github.com/rilldata/rill/runtime/queries"

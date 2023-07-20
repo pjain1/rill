@@ -5258,6 +5258,492 @@ var _ interface {
 	ErrorName() string
 } = TriggerSyncResponseValidationError{}
 
+// Validate checks the field values on GetProjectAccessRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *GetProjectAccessRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on GetProjectAccessRequest with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// GetProjectAccessRequestMultiError, or nil if none found.
+func (m *GetProjectAccessRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *GetProjectAccessRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if !_GetProjectAccessRequest_InstanceId_Pattern.MatchString(m.GetInstanceId()) {
+		err := GetProjectAccessRequestValidationError{
+			field:  "InstanceId",
+			reason: "value does not match regex pattern \"^[_\\\\-a-zA-Z0-9]+$\"",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return GetProjectAccessRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// GetProjectAccessRequestMultiError is an error wrapping multiple validation
+// errors returned by GetProjectAccessRequest.ValidateAll() if the designated
+// constraints aren't met.
+type GetProjectAccessRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m GetProjectAccessRequestMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m GetProjectAccessRequestMultiError) AllErrors() []error { return m }
+
+// GetProjectAccessRequestValidationError is the validation error returned by
+// GetProjectAccessRequest.Validate if the designated constraints aren't met.
+type GetProjectAccessRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e GetProjectAccessRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e GetProjectAccessRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e GetProjectAccessRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e GetProjectAccessRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e GetProjectAccessRequestValidationError) ErrorName() string {
+	return "GetProjectAccessRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e GetProjectAccessRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sGetProjectAccessRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = GetProjectAccessRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = GetProjectAccessRequestValidationError{}
+
+var _GetProjectAccessRequest_InstanceId_Pattern = regexp.MustCompile("^[_\\-a-zA-Z0-9]+$")
+
+// Validate checks the field values on GetProjectAccessResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *GetProjectAccessResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on GetProjectAccessResponse with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// GetProjectAccessResponseMultiError, or nil if none found.
+func (m *GetProjectAccessResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *GetProjectAccessResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if all {
+		switch v := interface{}(m.GetProjectAccess()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, GetProjectAccessResponseValidationError{
+					field:  "ProjectAccess",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, GetProjectAccessResponseValidationError{
+					field:  "ProjectAccess",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetProjectAccess()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return GetProjectAccessResponseValidationError{
+				field:  "ProjectAccess",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return GetProjectAccessResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// GetProjectAccessResponseMultiError is an error wrapping multiple validation
+// errors returned by GetProjectAccessResponse.ValidateAll() if the designated
+// constraints aren't met.
+type GetProjectAccessResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m GetProjectAccessResponseMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m GetProjectAccessResponseMultiError) AllErrors() []error { return m }
+
+// GetProjectAccessResponseValidationError is the validation error returned by
+// GetProjectAccessResponse.Validate if the designated constraints aren't met.
+type GetProjectAccessResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e GetProjectAccessResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e GetProjectAccessResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e GetProjectAccessResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e GetProjectAccessResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e GetProjectAccessResponseValidationError) ErrorName() string {
+	return "GetProjectAccessResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e GetProjectAccessResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sGetProjectAccessResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = GetProjectAccessResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = GetProjectAccessResponseValidationError{}
+
+// Validate checks the field values on ProjectAccess with the rules defined in
+// the proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *ProjectAccess) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ProjectAccess with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// result is a list of violation errors wrapped in ProjectAccessMultiError, or
+// nil if none found.
+func (m *ProjectAccess) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ProjectAccess) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	for idx, item := range m.GetClaims() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, ProjectAccessValidationError{
+						field:  fmt.Sprintf("Claims[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, ProjectAccessValidationError{
+						field:  fmt.Sprintf("Claims[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return ProjectAccessValidationError{
+					field:  fmt.Sprintf("Claims[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
+	// no validation rules for DefaultModelAccess
+
+	if len(errors) > 0 {
+		return ProjectAccessMultiError(errors)
+	}
+
+	return nil
+}
+
+// ProjectAccessMultiError is an error wrapping multiple validation errors
+// returned by ProjectAccess.ValidateAll() if the designated constraints
+// aren't met.
+type ProjectAccessMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ProjectAccessMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ProjectAccessMultiError) AllErrors() []error { return m }
+
+// ProjectAccessValidationError is the validation error returned by
+// ProjectAccess.Validate if the designated constraints aren't met.
+type ProjectAccessValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ProjectAccessValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ProjectAccessValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ProjectAccessValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ProjectAccessValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ProjectAccessValidationError) ErrorName() string { return "ProjectAccessValidationError" }
+
+// Error satisfies the builtin error interface
+func (e ProjectAccessValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sProjectAccess.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ProjectAccessValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ProjectAccessValidationError{}
+
+// Validate checks the field values on Claims with the rules defined in the
+// proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *Claims) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on Claims with the rules defined in the
+// proto definition for this message. If any rules are violated, the result is
+// a list of violation errors wrapped in ClaimsMultiError, or nil if none found.
+func (m *Claims) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *Claims) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Name
+
+	// no validation rules for Type
+
+	// no validation rules for Default
+
+	if len(errors) > 0 {
+		return ClaimsMultiError(errors)
+	}
+
+	return nil
+}
+
+// ClaimsMultiError is an error wrapping multiple validation errors returned by
+// Claims.ValidateAll() if the designated constraints aren't met.
+type ClaimsMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ClaimsMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ClaimsMultiError) AllErrors() []error { return m }
+
+// ClaimsValidationError is the validation error returned by Claims.Validate if
+// the designated constraints aren't met.
+type ClaimsValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ClaimsValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ClaimsValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ClaimsValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ClaimsValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ClaimsValidationError) ErrorName() string { return "ClaimsValidationError" }
+
+// Error satisfies the builtin error interface
+func (e ClaimsValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sClaims.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ClaimsValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ClaimsValidationError{}
+
 // Validate checks the field values on ReconcileRequest with the rules defined
 // in the proto definition for this message. If any rules are violated, the
 // first error encountered is returned, or nil if there are no violations.

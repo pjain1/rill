@@ -113,7 +113,7 @@ export function createShowHideMeasuresStore(
     "allMeasuresVisible",
     /*
      * This selector returns the best available string for each measure,
-     * using the "label" if available but falling back to the expression
+     * using the "label" if available but falling back to the evaluate
      * if needed.
      */
     (m) => m.label || m.expression

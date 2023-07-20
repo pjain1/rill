@@ -510,8 +510,8 @@ dimensions:
 - label: Domain
   property: domain
 measures:
-- expression: count(*)
-- expression: avg(bid_price)
+- evaluate: count(*)
+- evaluate: avg(bid_price)
 `))
 	result, err = s.Reconcile(context.Background(), catalog.ReconcileConfig{})
 	require.NoError(t, err)
@@ -541,8 +541,8 @@ dimensions:
   property: domain
   ignore: true
 measures:
-- expression: count(*)
-- expression: avg(bid_price)
+- evaluate: count(*)
+- evaluate: avg(bid_price)
   ignore: true
 `))
 	require.NoError(t, err)
@@ -567,9 +567,9 @@ dimensions:
   property: domain
   ignore: true
 measures:
-- expression: count(*)
+- evaluate: count(*)
   ignore: true
-- expression: avg(bid_price)
+- evaluate: avg(bid_price)
   ignore: true
 `))
 	require.NoError(t, err)
@@ -590,8 +590,8 @@ dimensions:
   property: domain
   ignore: true
 measures:
-- expression: count(*)
-- expression: avg(bid_price)
+- evaluate: count(*)
+- evaluate: avg(bid_price)
   ignore: true
 `))
 	require.NoError(t, err)
@@ -612,9 +612,9 @@ dimensions:
   property: domain
   ignore: true
 measures:
-- expression: count(*)
+- evaluate: count(*)
   name: imp
-- expression: avg(bid_price)
+- evaluate: avg(bid_price)
   name: imp
 `))
 	require.NoError(t, err)

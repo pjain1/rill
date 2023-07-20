@@ -44,6 +44,7 @@ const (
 	RuntimeService_RenameFileAndReconcile_FullMethodName = "/rill.runtime.v1.RuntimeService/RenameFileAndReconcile"
 	RuntimeService_RefreshAndReconcile_FullMethodName    = "/rill.runtime.v1.RuntimeService/RefreshAndReconcile"
 	RuntimeService_ListConnectors_FullMethodName         = "/rill.runtime.v1.RuntimeService/ListConnectors"
+	RuntimeService_GetProjectAccess_FullMethodName       = "/rill.runtime.v1.RuntimeService/GetProjectAccess"
 )
 
 // RuntimeServiceClient is the client API for RuntimeService service.
@@ -108,6 +109,8 @@ type RuntimeServiceClient interface {
 	// ListConnectors returns a description of all the connectors implemented in the runtime,
 	// including their schema and validation rules
 	ListConnectors(ctx context.Context, in *ListConnectorsRequest, opts ...grpc.CallOption) (*ListConnectorsResponse, error)
+	// GetProjectAccess returns information about project access specified in rill.yaml file
+	GetProjectAccess(ctx context.Context, in *GetProjectAccessRequest, opts ...grpc.CallOption) (*GetProjectAccessResponse, error)
 }
 
 type runtimeServiceClient struct {
@@ -343,6 +346,15 @@ func (c *runtimeServiceClient) ListConnectors(ctx context.Context, in *ListConne
 	return out, nil
 }
 
+func (c *runtimeServiceClient) GetProjectAccess(ctx context.Context, in *GetProjectAccessRequest, opts ...grpc.CallOption) (*GetProjectAccessResponse, error) {
+	out := new(GetProjectAccessResponse)
+	err := c.cc.Invoke(ctx, RuntimeService_GetProjectAccess_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RuntimeServiceServer is the server API for RuntimeService service.
 // All implementations must embed UnimplementedRuntimeServiceServer
 // for forward compatibility
@@ -405,6 +417,8 @@ type RuntimeServiceServer interface {
 	// ListConnectors returns a description of all the connectors implemented in the runtime,
 	// including their schema and validation rules
 	ListConnectors(context.Context, *ListConnectorsRequest) (*ListConnectorsResponse, error)
+	// GetProjectAccess returns information about project access specified in rill.yaml file
+	GetProjectAccess(context.Context, *GetProjectAccessRequest) (*GetProjectAccessResponse, error)
 	mustEmbedUnimplementedRuntimeServiceServer()
 }
 
@@ -486,6 +500,9 @@ func (UnimplementedRuntimeServiceServer) RefreshAndReconcile(context.Context, *R
 }
 func (UnimplementedRuntimeServiceServer) ListConnectors(context.Context, *ListConnectorsRequest) (*ListConnectorsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListConnectors not implemented")
+}
+func (UnimplementedRuntimeServiceServer) GetProjectAccess(context.Context, *GetProjectAccessRequest) (*GetProjectAccessResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetProjectAccess not implemented")
 }
 func (UnimplementedRuntimeServiceServer) mustEmbedUnimplementedRuntimeServiceServer() {}
 
@@ -950,6 +967,24 @@ func _RuntimeService_ListConnectors_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _RuntimeService_GetProjectAccess_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetProjectAccessRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RuntimeServiceServer).GetProjectAccess(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RuntimeService_GetProjectAccess_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RuntimeServiceServer).GetProjectAccess(ctx, req.(*GetProjectAccessRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // RuntimeService_ServiceDesc is the grpc.ServiceDesc for RuntimeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1056,6 +1091,10 @@ var RuntimeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListConnectors",
 			Handler:    _RuntimeService_ListConnectors_Handler,
+		},
+		{
+			MethodName: "GetProjectAccess",
+			Handler:    _RuntimeService_GetProjectAccess_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

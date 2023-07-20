@@ -492,6 +492,376 @@ var _ interface {
 	ErrorName() string
 } = ModelValidationError{}
 
+// Validate checks the field values on ModelMeta with the rules defined in the
+// proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *ModelMeta) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ModelMeta with the rules defined in
+// the proto definition for this message. If any rules are violated, the
+// result is a list of violation errors wrapped in ModelMetaMultiError, or nil
+// if none found.
+func (m *ModelMeta) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ModelMeta) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if all {
+		switch v := interface{}(m.GetAccess()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, ModelMetaValidationError{
+					field:  "Access",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, ModelMetaValidationError{
+					field:  "Access",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetAccess()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return ModelMetaValidationError{
+				field:  "Access",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return ModelMetaMultiError(errors)
+	}
+
+	return nil
+}
+
+// ModelMetaMultiError is an error wrapping multiple validation errors returned
+// by ModelMeta.ValidateAll() if the designated constraints aren't met.
+type ModelMetaMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ModelMetaMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ModelMetaMultiError) AllErrors() []error { return m }
+
+// ModelMetaValidationError is the validation error returned by
+// ModelMeta.Validate if the designated constraints aren't met.
+type ModelMetaValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ModelMetaValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ModelMetaValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ModelMetaValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ModelMetaValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ModelMetaValidationError) ErrorName() string { return "ModelMetaValidationError" }
+
+// Error satisfies the builtin error interface
+func (e ModelMetaValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sModelMeta.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ModelMetaValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ModelMetaValidationError{}
+
+// Validate checks the field values on ModelAccess with the rules defined in
+// the proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *ModelAccess) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ModelAccess with the rules defined in
+// the proto definition for this message. If any rules are violated, the
+// result is a list of violation errors wrapped in ModelAccessMultiError, or
+// nil if none found.
+func (m *ModelAccess) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ModelAccess) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Condition
+
+	// no validation rules for Filter
+
+	for idx, item := range m.GetColumns() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, ModelAccessValidationError{
+						field:  fmt.Sprintf("Columns[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, ModelAccessValidationError{
+						field:  fmt.Sprintf("Columns[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return ModelAccessValidationError{
+					field:  fmt.Sprintf("Columns[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
+	if len(errors) > 0 {
+		return ModelAccessMultiError(errors)
+	}
+
+	return nil
+}
+
+// ModelAccessMultiError is an error wrapping multiple validation errors
+// returned by ModelAccess.ValidateAll() if the designated constraints aren't met.
+type ModelAccessMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ModelAccessMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ModelAccessMultiError) AllErrors() []error { return m }
+
+// ModelAccessValidationError is the validation error returned by
+// ModelAccess.Validate if the designated constraints aren't met.
+type ModelAccessValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ModelAccessValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ModelAccessValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ModelAccessValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ModelAccessValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ModelAccessValidationError) ErrorName() string { return "ModelAccessValidationError" }
+
+// Error satisfies the builtin error interface
+func (e ModelAccessValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sModelAccess.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ModelAccessValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ModelAccessValidationError{}
+
+// Validate checks the field values on ColumnAccess with the rules defined in
+// the proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *ColumnAccess) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ColumnAccess with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// result is a list of violation errors wrapped in ColumnAccessMultiError, or
+// nil if none found.
+func (m *ColumnAccess) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ColumnAccess) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Condition
+
+	// no validation rules for Name
+
+	// no validation rules for Include
+
+	if len(errors) > 0 {
+		return ColumnAccessMultiError(errors)
+	}
+
+	return nil
+}
+
+// ColumnAccessMultiError is an error wrapping multiple validation errors
+// returned by ColumnAccess.ValidateAll() if the designated constraints aren't met.
+type ColumnAccessMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ColumnAccessMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ColumnAccessMultiError) AllErrors() []error { return m }
+
+// ColumnAccessValidationError is the validation error returned by
+// ColumnAccess.Validate if the designated constraints aren't met.
+type ColumnAccessValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ColumnAccessValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ColumnAccessValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ColumnAccessValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ColumnAccessValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ColumnAccessValidationError) ErrorName() string { return "ColumnAccessValidationError" }
+
+// Error satisfies the builtin error interface
+func (e ColumnAccessValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sColumnAccess.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ColumnAccessValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ColumnAccessValidationError{}
+
 // Validate checks the field values on MetricsView with the rules defined in
 // the proto definition for this message. If any rules are violated, the first
 // error encountered is returned, or nil if there are no violations.

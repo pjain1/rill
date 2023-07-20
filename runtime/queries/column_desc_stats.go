@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/rilldata/rill/runtime/server"
+	"github.com/rilldata/rill/runtime/server/auth"
 	"io"
 
 	runtimev1 "github.com/rilldata/rill/proto/gen/rill/runtime/v1"
@@ -44,6 +46,30 @@ func (q *ColumnDescriptiveStatistics) UnmarshalResult(v any) error {
 }
 
 func (q *ColumnDescriptiveStatistics) Resolve(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+	return q.resolve(ctx, rt, instanceID, priority, "")
+}
+
+func (q *ColumnDescriptiveStatistics) ResolveRestricted(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+	if auth.GetClaims(ctx).IsRestrictedRole() {
+		// Check if the backing model has access policy
+
+		modelMeta, err := runtime.LookupModelMeta(ctx, rt, instanceID, q.TableName+"_meta")
+		if err != nil {
+			return err
+		}
+
+		evaluatedModel := auth.GetClaims(ctx).Evaluate(modelMeta, "restricted")
+
+		// role should come from the runtime request
+		if !evaluatedModel.Access {
+			return server.ErrForbidden
+		}
+		return q.resolve(ctx, rt, instanceID, priority, evaluatedModel.Filter)
+	}
+	return q.resolve(ctx, rt, instanceID, priority, "")
+}
+
+func (q *ColumnDescriptiveStatistics) resolve(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int, filter string) error {
 	olap, err := rt.OLAP(ctx, instanceID)
 	if err != nil {
 		return err
@@ -71,6 +97,11 @@ func (q *ColumnDescriptiveStatistics) Resolve(ctx context.Context, rt *runtime.R
 		sanitizedColumnName,
 		sanitizedColumnName,
 		safeName(q.TableName))
+
+	if filter != "" {
+		// TODO sanitize column names here ?
+		descriptiveStatisticsSQL = fmt.Sprintf("%s WHERE %s", descriptiveStatisticsSQL, filter)
+	}
 
 	rows, err := olap.Execute(ctx, &drivers.Statement{
 		Query:            descriptiveStatisticsSQL,
@@ -109,7 +140,6 @@ func (q *ColumnDescriptiveStatistics) Resolve(ctx context.Context, rt *runtime.R
 
 	return nil
 }
-
 func (q *ColumnDescriptiveStatistics) Export(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int, format runtimev1.ExportFormat, w io.Writer) error {
 	return ErrExportNotSupported
 }

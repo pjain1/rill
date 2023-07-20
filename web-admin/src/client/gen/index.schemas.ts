@@ -66,6 +66,22 @@ export type AdminServiceCreateWhitelistedDomainBody = {
   role?: string;
 };
 
+export type AdminServiceCreateProjectRestrictedRoleBody = {
+  role?: string;
+  description?: string;
+  attributes?: V1RestrictedRoleAttribute[];
+};
+
+export type AdminServiceAddRestrictedProjectMemberBody = {
+  email?: string;
+  roles?: string[];
+};
+
+export type AdminServiceSetProjectMemberRoleBody = {
+  role?: string;
+  isRestricted?: boolean;
+};
+
 export type AdminServiceListProjectMembersParams = {
   pageSize?: number;
   pageToken?: string;
@@ -74,6 +90,10 @@ export type AdminServiceListProjectMembersParams = {
 export type AdminServiceListProjectInvitesParams = {
   pageSize?: number;
   pageToken?: string;
+};
+
+export type AdminServiceSetOrganizationMemberRoleBody = {
+  role?: string;
 };
 
 export type AdminServiceRemoveOrganizationMemberParams = {
@@ -110,10 +130,6 @@ export type AdminServiceTriggerRefreshSourcesBody = {
 
 export type AdminServiceAddOrganizationMemberBodyBody = {
   email?: string;
-  role?: string;
-};
-
-export type AdminServiceSetOrganizationMemberRoleBodyBody = {
   role?: string;
 };
 
@@ -228,6 +244,16 @@ export interface V1RevokeCurrentAuthTokenResponse {
   tokenId?: string;
 }
 
+export interface V1RestrictedRoleAttribute {
+  key?: string;
+  value?: string;
+}
+
+export interface V1RestrictedRole {
+  name?: string;
+  attributes?: V1RestrictedRoleAttribute[];
+}
+
 export interface V1RemoveWhitelistedDomainResponse {
   [key: string]: any;
 }
@@ -251,6 +277,7 @@ export interface V1ProjectPermissions {
   manageDev?: boolean;
   readProjectMembers?: boolean;
   manageProjectMembers?: boolean;
+  restrictedRoles?: V1RestrictedRole[];
 }
 
 export interface V1Project {
@@ -406,7 +433,7 @@ export interface V1GetCurrentUserResponse {
 }
 
 export type V1DeploymentStatus =
-  (typeof V1DeploymentStatus)[keyof typeof V1DeploymentStatus];
+  typeof V1DeploymentStatus[keyof typeof V1DeploymentStatus];
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const V1DeploymentStatus = {
@@ -439,6 +466,10 @@ export interface V1DeleteOrganizationResponse {
 }
 
 export interface V1CreateWhitelistedDomainResponse {
+  [key: string]: any;
+}
+
+export interface V1CreateProjectRestrictedRoleResponse {
   [key: string]: any;
 }
 

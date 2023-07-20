@@ -78,6 +78,22 @@ type Dimension struct {
 	Ignore      bool `yaml:"ignore,omitempty"`
 }
 
+type ModelMeta struct {
+	Access *ModelAccess `yaml:"access,omitempty"`
+}
+
+type ModelAccess struct {
+	Condition string          `yaml:"if,omitempty"`      // model access condition
+	Filter    string          `yaml:"filter,omitempty"`  // row level filter evaluate
+	Columns   []*ColumnAccess `yaml:"columns,omitempty"` // column level access
+}
+
+type ColumnAccess struct {
+	Condition string `yaml:"if,omitempty"` // column access condition
+	Name      string // column name
+	Include   bool   // include or exclude
+}
+
 func toSourceArtifact(catalog *drivers.CatalogEntry) (*Source, error) {
 	source := &Source{
 		Type: catalog.GetSource().Connector,

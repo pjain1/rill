@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/rilldata/rill/runtime/server"
+	"github.com/rilldata/rill/runtime/server/auth"
 	"io"
 	"math"
 
@@ -50,14 +52,14 @@ func (q *ColumnNumericHistogram) UnmarshalResult(v any) error {
 	return nil
 }
 
-func (q *ColumnNumericHistogram) Resolve(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+func (q *ColumnNumericHistogram) resolve(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int, filter string) error {
 	if q.Method == runtimev1.HistogramMethod_HISTOGRAM_METHOD_FD {
-		err := q.calculateFDMethod(ctx, rt, instanceID, priority)
+		err := q.calculateFDMethod(ctx, rt, instanceID, priority, filter)
 		if err != nil {
 			return err
 		}
 	} else if q.Method == runtimev1.HistogramMethod_HISTOGRAM_METHOD_DIAGNOSTIC {
-		err := q.calculateDiagnosticMethod(ctx, rt, instanceID, priority)
+		err := q.calculateDiagnosticMethod(ctx, rt, instanceID, priority, filter)
 		if err != nil {
 			return err
 		}
@@ -68,11 +70,35 @@ func (q *ColumnNumericHistogram) Resolve(ctx context.Context, rt *runtime.Runtim
 	return nil
 }
 
+func (q *ColumnNumericHistogram) Resolve(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+	return q.resolve(ctx, rt, instanceID, priority, "")
+}
+
+func (q *ColumnNumericHistogram) ResolveRestricted(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+	if auth.GetClaims(ctx).IsRestrictedRole() {
+		// Check if the backing model has access policy
+
+		modelMeta, err := runtime.LookupModelMeta(ctx, rt, instanceID, q.TableName+"_meta")
+		if err != nil {
+			return err
+		}
+
+		evaluatedModel := auth.GetClaims(ctx).Evaluate(modelMeta, "restricted")
+
+		// role should come from the runtime request
+		if !evaluatedModel.Access {
+			return server.ErrForbidden
+		}
+		return q.resolve(ctx, rt, instanceID, priority, evaluatedModel.Filter)
+	}
+	return q.resolve(ctx, rt, instanceID, priority, "")
+}
+
 func (q *ColumnNumericHistogram) Export(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int, format runtimev1.ExportFormat, w io.Writer) error {
 	return ErrExportNotSupported
 }
 
-func (q *ColumnNumericHistogram) calculateBucketSize(ctx context.Context, olap drivers.OLAPStore, instanceID string, priority int) (float64, error) {
+func (q *ColumnNumericHistogram) calculateBucketSize(ctx context.Context, olap drivers.OLAPStore, instanceID string, priority int, filter string) (float64, error) {
 	sanitizedColumnName := safeName(q.ColumnName)
 	querySQL := fmt.Sprintf(
 		"SELECT (approx_quantile(%s, 0.75)-approx_quantile(%s, 0.25))::DOUBLE AS iqr, approx_count_distinct(%s) AS count, (max(%s) - min(%s))::DOUBLE AS range FROM %s",
@@ -83,6 +109,10 @@ func (q *ColumnNumericHistogram) calculateBucketSize(ctx context.Context, olap d
 		sanitizedColumnName,
 		safeName(q.TableName),
 	)
+
+	if filter != "" {
+		querySQL = fmt.Sprintf("%s WHERE %s", querySQL, filter)
+	}
 
 	rows, err := olap.Execute(ctx, &drivers.Statement{
 		Query:            querySQL,
@@ -125,7 +155,7 @@ func (q *ColumnNumericHistogram) calculateBucketSize(ctx context.Context, olap d
 	return bucketSize, nil
 }
 
-func (q *ColumnNumericHistogram) calculateFDMethod(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+func (q *ColumnNumericHistogram) calculateFDMethod(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int, filter string) error {
 	olap, err := rt.OLAP(ctx, instanceID)
 	if err != nil {
 		return err
@@ -136,7 +166,7 @@ func (q *ColumnNumericHistogram) calculateFDMethod(ctx context.Context, rt *runt
 	}
 
 	sanitizedColumnName := safeName(q.ColumnName)
-	bucketSize, err := q.calculateBucketSize(ctx, olap, instanceID, priority)
+	bucketSize, err := q.calculateBucketSize(ctx, olap, instanceID, priority, filter)
 	if err != nil {
 		return err
 	}
@@ -146,12 +176,17 @@ func (q *ColumnNumericHistogram) calculateFDMethod(ctx context.Context, rt *runt
 	}
 
 	selectColumn := fmt.Sprintf("%s::DOUBLE", sanitizedColumnName)
+
+	if filter != "" {
+		filter = " AND " + filter
+	}
+
 	histogramSQL := fmt.Sprintf(
 		`
           WITH data_table AS (
             SELECT %[1]s as %[2]s 
             FROM %[3]s
-            WHERE %[2]s IS NOT NULL
+            WHERE %[2]s IS NOT NULL %[5]s
           ), S AS (
             SELECT 
               min(%[2]s) as minVal,
@@ -203,6 +238,7 @@ func (q *ColumnNumericHistogram) calculateFDMethod(ctx context.Context, rt *runt
 		sanitizedColumnName,
 		safeName(q.TableName),
 		bucketSize,
+		filter,
 	)
 
 	histogramRows, err := olap.Execute(ctx, &drivers.Statement{
@@ -236,7 +272,7 @@ func (q *ColumnNumericHistogram) calculateFDMethod(ctx context.Context, rt *runt
 	return nil
 }
 
-func (q *ColumnNumericHistogram) calculateDiagnosticMethod(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+func (q *ColumnNumericHistogram) calculateDiagnosticMethod(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int, filter string) error {
 	olap, err := rt.OLAP(ctx, instanceID)
 	if err != nil {
 		return err
@@ -259,6 +295,10 @@ func (q *ColumnNumericHistogram) calculateDiagnosticMethod(ctx context.Context, 
 		safeName(q.TableName),
 		sanitizedColumnName,
 	)
+
+	if filter != "" {
+		minMaxSQL = fmt.Sprintf("%s AND %s", minMaxSQL, filter)
+	}
 
 	minMaxRow, err := olap.Execute(ctx, &drivers.Statement{
 		Query:            minMaxSQL,

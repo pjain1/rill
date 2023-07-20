@@ -1,0 +1,11 @@
+access:
+  claims:
+    - name: tenant_id
+      type: string # string, number, bool and timestamp
+      default: aaa # will be used if no value is provided for a user/usergroup
+    - name: countryCode
+      type: string
+      options:
+        - "IN"
+        - "DK"
+  default_model_access: allow # defines default access for restricted_access role on a model which does not have any policy

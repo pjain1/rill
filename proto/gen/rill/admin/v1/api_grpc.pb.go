@@ -44,8 +44,10 @@ const (
 	AdminService_ListProjectMembers_FullMethodName           = "/rill.admin.v1.AdminService/ListProjectMembers"
 	AdminService_ListProjectInvites_FullMethodName           = "/rill.admin.v1.AdminService/ListProjectInvites"
 	AdminService_AddProjectMember_FullMethodName             = "/rill.admin.v1.AdminService/AddProjectMember"
+	AdminService_AddRestrictedProjectMember_FullMethodName   = "/rill.admin.v1.AdminService/AddRestrictedProjectMember"
 	AdminService_RemoveProjectMember_FullMethodName          = "/rill.admin.v1.AdminService/RemoveProjectMember"
 	AdminService_SetProjectMemberRole_FullMethodName         = "/rill.admin.v1.AdminService/SetProjectMemberRole"
+	AdminService_CreateProjectRestrictedRole_FullMethodName  = "/rill.admin.v1.AdminService/CreateProjectRestrictedRole"
 	AdminService_GetCurrentUser_FullMethodName               = "/rill.admin.v1.AdminService/GetCurrentUser"
 	AdminService_IssueRepresentativeAuthToken_FullMethodName = "/rill.admin.v1.AdminService/IssueRepresentativeAuthToken"
 	AdminService_RevokeCurrentAuthToken_FullMethodName       = "/rill.admin.v1.AdminService/RevokeCurrentAuthToken"
@@ -117,10 +119,14 @@ type AdminServiceClient interface {
 	ListProjectInvites(ctx context.Context, in *ListProjectInvitesRequest, opts ...grpc.CallOption) (*ListProjectInvitesResponse, error)
 	// AddProjectMember adds a member to the project
 	AddProjectMember(ctx context.Context, in *AddProjectMemberRequest, opts ...grpc.CallOption) (*AddProjectMemberResponse, error)
+	// AddRestrictedProjectMember adds a member to the project
+	AddRestrictedProjectMember(ctx context.Context, in *AddRestrictedProjectMemberRequest, opts ...grpc.CallOption) (*AddProjectMemberResponse, error)
 	// RemoveProjectMember removes member from the project
 	RemoveProjectMember(ctx context.Context, in *RemoveProjectMemberRequest, opts ...grpc.CallOption) (*RemoveProjectMemberResponse, error)
 	// SetProjectMemberRole sets the role for the member
 	SetProjectMemberRole(ctx context.Context, in *SetProjectMemberRoleRequest, opts ...grpc.CallOption) (*SetProjectMemberRoleResponse, error)
+	// CreateProjectRestrictedRole sets the role for the member
+	CreateProjectRestrictedRole(ctx context.Context, in *CreateProjectRestrictedRoleRequest, opts ...grpc.CallOption) (*CreateProjectRestrictedRoleResponse, error)
 	// GetCurrentUser returns the currently authenticated user (if any)
 	GetCurrentUser(ctx context.Context, in *GetCurrentUserRequest, opts ...grpc.CallOption) (*GetCurrentUserResponse, error)
 	// IssueRepresentativeAuthToken returns the temporary token for given email
@@ -387,6 +393,15 @@ func (c *adminServiceClient) AddProjectMember(ctx context.Context, in *AddProjec
 	return out, nil
 }
 
+func (c *adminServiceClient) AddRestrictedProjectMember(ctx context.Context, in *AddRestrictedProjectMemberRequest, opts ...grpc.CallOption) (*AddProjectMemberResponse, error) {
+	out := new(AddProjectMemberResponse)
+	err := c.cc.Invoke(ctx, AdminService_AddRestrictedProjectMember_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *adminServiceClient) RemoveProjectMember(ctx context.Context, in *RemoveProjectMemberRequest, opts ...grpc.CallOption) (*RemoveProjectMemberResponse, error) {
 	out := new(RemoveProjectMemberResponse)
 	err := c.cc.Invoke(ctx, AdminService_RemoveProjectMember_FullMethodName, in, out, opts...)
@@ -399,6 +414,15 @@ func (c *adminServiceClient) RemoveProjectMember(ctx context.Context, in *Remove
 func (c *adminServiceClient) SetProjectMemberRole(ctx context.Context, in *SetProjectMemberRoleRequest, opts ...grpc.CallOption) (*SetProjectMemberRoleResponse, error) {
 	out := new(SetProjectMemberRoleResponse)
 	err := c.cc.Invoke(ctx, AdminService_SetProjectMemberRole_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) CreateProjectRestrictedRole(ctx context.Context, in *CreateProjectRestrictedRoleRequest, opts ...grpc.CallOption) (*CreateProjectRestrictedRoleResponse, error) {
+	out := new(CreateProjectRestrictedRoleResponse)
+	err := c.cc.Invoke(ctx, AdminService_CreateProjectRestrictedRole_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -594,10 +618,14 @@ type AdminServiceServer interface {
 	ListProjectInvites(context.Context, *ListProjectInvitesRequest) (*ListProjectInvitesResponse, error)
 	// AddProjectMember adds a member to the project
 	AddProjectMember(context.Context, *AddProjectMemberRequest) (*AddProjectMemberResponse, error)
+	// AddRestrictedProjectMember adds a member to the project
+	AddRestrictedProjectMember(context.Context, *AddRestrictedProjectMemberRequest) (*AddProjectMemberResponse, error)
 	// RemoveProjectMember removes member from the project
 	RemoveProjectMember(context.Context, *RemoveProjectMemberRequest) (*RemoveProjectMemberResponse, error)
 	// SetProjectMemberRole sets the role for the member
 	SetProjectMemberRole(context.Context, *SetProjectMemberRoleRequest) (*SetProjectMemberRoleResponse, error)
+	// CreateProjectRestrictedRole sets the role for the member
+	CreateProjectRestrictedRole(context.Context, *CreateProjectRestrictedRoleRequest) (*CreateProjectRestrictedRoleResponse, error)
 	// GetCurrentUser returns the currently authenticated user (if any)
 	GetCurrentUser(context.Context, *GetCurrentUserRequest) (*GetCurrentUserResponse, error)
 	// IssueRepresentativeAuthToken returns the temporary token for given email
@@ -711,11 +739,17 @@ func (UnimplementedAdminServiceServer) ListProjectInvites(context.Context, *List
 func (UnimplementedAdminServiceServer) AddProjectMember(context.Context, *AddProjectMemberRequest) (*AddProjectMemberResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddProjectMember not implemented")
 }
+func (UnimplementedAdminServiceServer) AddRestrictedProjectMember(context.Context, *AddRestrictedProjectMemberRequest) (*AddProjectMemberResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddRestrictedProjectMember not implemented")
+}
 func (UnimplementedAdminServiceServer) RemoveProjectMember(context.Context, *RemoveProjectMemberRequest) (*RemoveProjectMemberResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RemoveProjectMember not implemented")
 }
 func (UnimplementedAdminServiceServer) SetProjectMemberRole(context.Context, *SetProjectMemberRoleRequest) (*SetProjectMemberRoleResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetProjectMemberRole not implemented")
+}
+func (UnimplementedAdminServiceServer) CreateProjectRestrictedRole(context.Context, *CreateProjectRestrictedRoleRequest) (*CreateProjectRestrictedRoleResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateProjectRestrictedRole not implemented")
 }
 func (UnimplementedAdminServiceServer) GetCurrentUser(context.Context, *GetCurrentUserRequest) (*GetCurrentUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCurrentUser not implemented")
@@ -1225,6 +1259,24 @@ func _AdminService_AddProjectMember_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminService_AddRestrictedProjectMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddRestrictedProjectMemberRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).AddRestrictedProjectMember(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_AddRestrictedProjectMember_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).AddRestrictedProjectMember(ctx, req.(*AddRestrictedProjectMemberRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AdminService_RemoveProjectMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RemoveProjectMemberRequest)
 	if err := dec(in); err != nil {
@@ -1257,6 +1309,24 @@ func _AdminService_SetProjectMemberRole_Handler(srv interface{}, ctx context.Con
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AdminServiceServer).SetProjectMemberRole(ctx, req.(*SetProjectMemberRoleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_CreateProjectRestrictedRole_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateProjectRestrictedRoleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).CreateProjectRestrictedRole(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_CreateProjectRestrictedRole_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).CreateProjectRestrictedRole(ctx, req.(*CreateProjectRestrictedRoleRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1639,12 +1709,20 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AdminService_AddProjectMember_Handler,
 		},
 		{
+			MethodName: "AddRestrictedProjectMember",
+			Handler:    _AdminService_AddRestrictedProjectMember_Handler,
+		},
+		{
 			MethodName: "RemoveProjectMember",
 			Handler:    _AdminService_RemoveProjectMember_Handler,
 		},
 		{
 			MethodName: "SetProjectMemberRole",
 			Handler:    _AdminService_SetProjectMemberRole_Handler,
+		},
+		{
+			MethodName: "CreateProjectRestrictedRole",
+			Handler:    _AdminService_CreateProjectRestrictedRole_Handler,
 		},
 		{
 			MethodName: "GetCurrentUser",

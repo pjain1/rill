@@ -124,6 +124,8 @@ type DB interface {
 	FindProjectRole(ctx context.Context, name string) (*ProjectRole, error)
 	ResolveOrganizationRolesForUser(ctx context.Context, userID, orgID string) ([]*OrganizationRole, error)
 	ResolveProjectRolesForUser(ctx context.Context, userID, projectID string) ([]*ProjectRole, error)
+	FindRestrictedProjectRole(ctx context.Context, name, projectID string) (*RestrictedProjectRole, error)
+	ResolveRestrictedProjectRolesForUser(ctx context.Context, userID, projectID string) ([]*RestrictedProjectRole, error)
 
 	FindOrganizationMemberUsers(ctx context.Context, orgID, afterEmail string, limit int) ([]*Member, error)
 	FindOrganizationMemberUsersByRole(ctx context.Context, orgID, roleID string) ([]*User, error)
@@ -431,6 +433,7 @@ const (
 	ProjectRoleNameAdmin             = "admin"
 	ProjectRoleNameCollaborator      = "collaborator"
 	ProjectRoleNameViewer            = "viewer"
+	ProjectRoleNameRestricted        = "restricted"
 )
 
 // OrganizationRole represents roles for orgs.
@@ -460,6 +463,13 @@ type ProjectRole struct {
 	ManageDev            bool `db:"manage_dev"`
 	ReadProjectMembers   bool `db:"read_project_members"`
 	ManageProjectMembers bool `db:"manage_project_members"`
+}
+
+type RestrictedProjectRole struct {
+	ID         string
+	Name       string
+	ProjectID  string `db:"project_id"`
+	Attributes map[string]string
 }
 
 // Member is a convenience type used for display-friendly representation of an org or project member.
@@ -542,8 +552,9 @@ type InsertOrganizationInviteOptions struct {
 }
 
 type InsertProjectInviteOptions struct {
-	Email     string `validate:"email"`
-	InviterID string
-	ProjectID string `validate:"required"`
-	RoleID    string `validate:"required"`
+	Email             string `validate:"email"`
+	InviterID         string
+	ProjectID         string   `validate:"required"`
+	RoleID            string   `validate:"required"`
+	RestrictedRoleIDs []string `validate:"required"`
 }

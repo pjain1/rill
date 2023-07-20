@@ -574,6 +574,83 @@ paths:
             properties:
               role:
                 type: string
+              isRestricted:
+                type: boolean
+      tags:
+        - AdminService
+  /v1/organizations/{organization}/projects/{project}/restricted-members:
+    post:
+      summary: AddRestrictedProjectMember adds a member to the project
+      operationId: AdminService_AddRestrictedProjectMember
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1AddProjectMemberResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: organization
+          in: path
+          required: true
+          type: string
+        - name: project
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              email:
+                type: string
+              roles:
+                type: array
+                items:
+                  type: string
+      tags:
+        - AdminService
+  /v1/organizations/{organization}/projects/{project}/roles:
+    put:
+      summary: CreateProjectRestrictedRole sets the role for the member
+      operationId: AdminService_CreateProjectRestrictedRole
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateProjectRestrictedRoleResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: organization
+          in: path
+          required: true
+          type: string
+        - name: project
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              role:
+                type: string
+              description:
+                type: string
+              attributes:
+                type: array
+                items:
+                  type: object
+                  $ref: '#/definitions/v1RestrictedRoleAttribute'
       tags:
         - AdminService
   /v1/organizations/{organization}/whitelisted:
@@ -1151,6 +1228,8 @@ definitions:
     properties:
       project:
         $ref: '#/definitions/v1Project'
+  v1CreateProjectRestrictedRoleResponse:
+    type: object
   v1CreateWhitelistedDomainResponse:
     type: object
   v1DeleteOrganizationResponse:
@@ -1482,12 +1561,34 @@ definitions:
         type: boolean
       manageProjectMembers:
         type: boolean
+      restrictedRoles:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1RestrictedRole'
   v1RemoveOrganizationMemberResponse:
     type: object
   v1RemoveProjectMemberResponse:
     type: object
   v1RemoveWhitelistedDomainResponse:
     type: object
+  v1RestrictedRole:
+    type: object
+    properties:
+      name:
+        type: string
+      attributes:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1RestrictedRoleAttribute'
+  v1RestrictedRoleAttribute:
+    type: object
+    properties:
+      key:
+        type: string
+      value:
+        type: string
   v1RevokeCurrentAuthTokenResponse:
     type: object
     properties:

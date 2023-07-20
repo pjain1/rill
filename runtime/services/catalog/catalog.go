@@ -2,6 +2,7 @@ package catalog
 
 import (
 	"context"
+	"github.com/rilldata/rill/runtime/compilers/rillv1beta"
 	"sync"
 	"time"
 
@@ -69,6 +70,15 @@ func (s *Service) FindEntry(ctx context.Context, name string) (*drivers.CatalogE
 	defer s.Meta.lock.RUnlock()
 	s.Meta.fillDAGInEntry(entry)
 	return entry, nil
+}
+
+func (s *Service) GetAccess(ctx context.Context) (*rillv1beta.Access, error) {
+	c := rillv1beta.New(s.Repo, s.InstID)
+	proj, err := c.ProjectConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &proj.Access, nil
 }
 
 type MigrationMeta struct {

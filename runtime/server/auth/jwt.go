@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	adminv1 "github.com/rilldata/rill/proto/gen/rill/admin/v1"
 	"net/http"
 	"net/url"
 	"time"
@@ -111,11 +112,21 @@ type TokenOptions struct {
 	TTL                 time.Duration
 	SystemPermissions   []Permission
 	InstancePermissions map[string][]Permission
+	RestrictedRoles     []*adminv1.RestrictedRole
 }
 
 // NewToken issues a new JWT based on the provided options.
 func (i *Issuer) NewToken(opts TokenOptions) (string, error) {
 	now := time.Now()
+	restrictedRoles := make(map[string]map[string]string, len(opts.RestrictedRoles))
+	for _, role := range opts.RestrictedRoles {
+		attr := make(map[string]string, len(role.Attributes))
+		for _, a := range role.Attributes {
+			attr[a.Key] = a.Value
+		}
+		restrictedRoles[role.Name] = attr
+	}
+
 	claims := &jwtClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(opts.TTL)),
@@ -125,8 +136,9 @@ func (i *Issuer) NewToken(opts TokenOptions) (string, error) {
 			Subject:   opts.Subject,
 			Audience:  []string{opts.AudienceURL},
 		},
-		System:    opts.SystemPermissions,
-		Instances: opts.InstancePermissions,
+		System:          opts.SystemPermissions,
+		Instances:       opts.InstancePermissions,
+		RestrictedRoles: restrictedRoles,
 	}
 
 	token := jwt.NewWithClaims(jwt.GetSigningMethod(i.signingKey.Algorithm), claims)

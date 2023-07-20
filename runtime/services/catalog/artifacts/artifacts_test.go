@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/Masterminds/sprig/v3"
 	"os"
 	"path"
 	"reflect"
 	"testing"
+	"text/template"
 
 	runtimev1 "github.com/rilldata/rill/proto/gen/rill/runtime/v1"
 	"github.com/rilldata/rill/runtime/drivers"
@@ -151,12 +153,12 @@ dimensions:
 measures:
     - label: Mea0_L
       name: measure_0
-      expression: count(c0)
+      evaluate: count(c0)
       description: Mea0_D
       format_preset: humanise
     - label: Mea1_L
       name: avg_measure
-      expression: avg(c1)
+      evaluate: avg(c1)
       description: Mea1_D
       format_preset: humanise
 `,
@@ -353,11 +355,11 @@ dimensions:
 measures:
     - label: Mea0_L
       name: measure_imp
-      expression: count(c0)
+      evaluate: count(c0)
       description: Mea0_D
       format_preset: humanise
     - label: Mea1_L
-      expression: avg(c1)
+      evaluate: avg(c1)
       description: Mea1_D
       format_preset: humanise
 `))))
@@ -541,6 +543,24 @@ func TestSanitizedName(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestTemplateAttributes(t *testing.T) {
+	funcMap := sprig.TxtFuncMap()
+	delete(funcMap, "env")
+	delete(funcMap, "expandenv")
+
+	// convert templatised artifact
+	tp, err := template.New("source").Funcs(funcMap).Option("missingkey=error").Parse("tenant_id = {{ .claims.tenant_id }} AND domain = {{ .user.email_domain }}")
+	require.NoError(t, err)
+
+	env := map[string]map[string]string{"claims": {"tenant_id": "A"}, "user": {"email_domain": "rilldata.com"}}
+
+	bw := new(bytes.Buffer)
+	if err := tp.Execute(bw, env); err != nil {
+		require.NoError(t, err)
+	}
+	require.Equal(t, "tenant_id = A AND domain = rilldata.com", bw.String())
 }
 
 func TestReadWithEnvVariables(t *testing.T) {

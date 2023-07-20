@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/rilldata/rill/runtime/server"
+	"github.com/rilldata/rill/runtime/server/auth"
 	"io"
 	"reflect"
 	"strconv"
@@ -74,6 +76,30 @@ func (q *ColumnTimeseries) UnmarshalResult(v any) error {
 }
 
 func (q *ColumnTimeseries) Resolve(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+	return q.resolve(ctx, rt, instanceID, priority, "")
+}
+
+func (q *ColumnTimeseries) ResolveRestricted(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+	if auth.GetClaims(ctx).IsRestrictedRole() {
+		// Check if the backing model has access policy
+
+		modelMeta, err := runtime.LookupModelMeta(ctx, rt, instanceID, q.TableName+"_meta")
+		if err != nil {
+			return err
+		}
+
+		evaluatedModel := auth.GetClaims(ctx).Evaluate(modelMeta, "restricted")
+
+		// role should come from the runtime request
+		if !evaluatedModel.Access {
+			return server.ErrForbidden
+		}
+		return q.resolve(ctx, rt, instanceID, priority, evaluatedModel.Filter)
+	}
+	return q.resolve(ctx, rt, instanceID, priority, "")
+}
+
+func (q *ColumnTimeseries) resolve(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int, restrictedFilter string) error {
 	olap, err := rt.OLAP(ctx, instanceID)
 	if err != nil {
 		return err
@@ -100,6 +126,13 @@ func (q *ColumnTimeseries) Resolve(ctx context.Context, rt *runtime.Runtime, ins
 		}
 		if filter != "" {
 			filter = "WHERE 1=1 " + filter
+		}
+
+		if restrictedFilter != "" {
+			if filter == "" {
+				filter = "WHERE 1=1"
+			}
+			filter = filter + " AND " + restrictedFilter
 		}
 
 		measures := normaliseMeasures(q.Measures, q.Pixels != 0)

@@ -41,17 +41,17 @@ dimensions:
 
 measures:
   - label: "Number of bids"
-    expression: count(*)
+    evaluate: count(*)
     description: ""
     format_preset: ""
   - label: "Total volume"
-    expression: sum(volume)
+    evaluate: sum(volume)
     description: ""
     format_preset: ""
   - label: "Total impressions"
-    expression: sum(impressions)
+    evaluate: sum(impressions)
   - label: "Total clicks"
-    expression: sum(clicks)
+    evaluate: sum(clicks)
 */
 func TestServer_MetricsViewComparisonToplist(t *testing.T) {
 	t.Parallel()
@@ -641,17 +641,17 @@ Source:
 Measures:
 
   - label: "Number of bids"
-    expression: count(*)
+    evaluate: count(*)
     description: ""
     format_preset: ""
   - label: "Total volume"
-    expression: sum(volume)
+    evaluate: sum(volume)
     description: ""
     format_preset: ""
   - label: "Total impressions"
-    expression: sum(impressions)
+    evaluate: sum(impressions)
   - label: "Total clicks"
-    expression: sum(clicks)
+    evaluate: sum(clicks)
 */
 func TestServer_MetricsViewComparisonToplist_no_comparison(t *testing.T) {
 	t.Parallel()

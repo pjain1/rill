@@ -710,6 +710,22 @@ func (c *connection) ResolveProjectRolesForUser(ctx context.Context, userID, pro
 	return res, nil
 }
 
+func (c *connection) FindRestrictedProjectRole(ctx context.Context, name, projectID string) (*database.RestrictedProjectRole, error) {
+	role := &database.RestrictedProjectRole{}
+	err := c.getDB(ctx).QueryRowxContext(ctx, "SELECT * FROM restricted_project_roles WHERE lower(name)=lower($1) AND project_id=$2", name, projectID).StructScan(role)
+	if err != nil {
+		return nil, parseErr("restricted project role", err)
+	}
+	return role, nil
+}
+
+func (c *connection) ResolveRestrictedProjectRolesForUser(ctx context.Context, userID, projectID string) ([]*database.RestrictedProjectRole, error) {
+	var res []*database.RestrictedProjectRole
+	// TODO implement this
+	return res, nil
+
+}
+
 func (c *connection) FindOrganizationMemberUsers(ctx context.Context, orgID, afterEmail string, limit int) ([]*database.Member, error) {
 	var res []*database.Member
 	err := c.getDB(ctx).SelectContext(ctx, &res, `

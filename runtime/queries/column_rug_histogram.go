@@ -3,6 +3,8 @@ package queries
 import (
 	"context"
 	"fmt"
+	"github.com/rilldata/rill/runtime/server"
+	"github.com/rilldata/rill/runtime/server/auth"
 	"io"
 
 	runtimev1 "github.com/rilldata/rill/proto/gen/rill/runtime/v1"
@@ -48,6 +50,30 @@ func (q *ColumnRugHistogram) UnmarshalResult(v any) error {
 }
 
 func (q *ColumnRugHistogram) Resolve(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+	return q.resolve(ctx, rt, instanceID, priority, "")
+}
+
+func (q *ColumnRugHistogram) ResolveRestricted(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+	if auth.GetClaims(ctx).IsRestrictedRole() {
+		// Check if the backing model has access policy
+
+		modelMeta, err := runtime.LookupModelMeta(ctx, rt, instanceID, q.TableName+"_meta")
+		if err != nil {
+			return err
+		}
+
+		evaluatedModel := auth.GetClaims(ctx).Evaluate(modelMeta, "restricted")
+
+		// role should come from the runtime request
+		if !evaluatedModel.Access {
+			return server.ErrForbidden
+		}
+		return q.resolve(ctx, rt, instanceID, priority, evaluatedModel.Filter)
+	}
+	return q.resolve(ctx, rt, instanceID, priority, "")
+}
+
+func (q *ColumnRugHistogram) resolve(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int, filter string) error {
 	olap, err := rt.OLAP(ctx, instanceID)
 	if err != nil {
 		return err
@@ -61,10 +87,14 @@ func (q *ColumnRugHistogram) Resolve(ctx context.Context, rt *runtime.Runtime, i
 	outlierPseudoBucketSize := 500
 	selectColumn := fmt.Sprintf("%s::DOUBLE", sanitizedColumnName)
 
+	if filter != "" {
+		filter = "AND " + filter
+	}
+
 	rugSQL := fmt.Sprintf(`WITH data_table AS (
 		SELECT %[1]s as %[2]s
 		FROM %[3]s
-		WHERE %[2]s IS NOT NULL
+		WHERE %[2]s IS NOT NULL %[5]s
 	  ), S AS (
 		SELECT
 		  min(%[2]s) as minVal,
@@ -120,7 +150,7 @@ func (q *ColumnRugHistogram) Resolve(ctx context.Context, rt *runtime.Runtime, i
 		CASE WHEN count>0 THEN true ELSE false END AS present,
 		count
 	  FROM histrogram_with_edge
-	  WHERE present=true`, selectColumn, sanitizedColumnName, safeName(q.TableName), outlierPseudoBucketSize)
+	  WHERE present=true`, selectColumn, sanitizedColumnName, safeName(q.TableName), outlierPseudoBucketSize, filter)
 
 	outlierResults, err := olap.Execute(ctx, &drivers.Statement{
 		Query:            rugSQL,

@@ -190,6 +190,11 @@ service RuntimeService {
   rpc ListConnectors(ListConnectorsRequest) returns (ListConnectorsResponse) {
     option (google.api.http) = {get: "/v1/connectors/meta"};
   }
+
+  // GetProjectAccess returns information about project access specified in rill.yaml file
+  rpc GetProjectAccess(GetProjectAccessRequest) returns (GetProjectAccessResponse) {
+    option (google.api.http) = {get: "/v1/instances/{instance_id}/project/access"};
+  }
 }
 
 // Request message for RuntimeService.Ping
@@ -506,6 +511,28 @@ message TriggerSyncResponse {
   uint32 objects_added_count = 2;
   uint32 objects_updated_count = 3;
   uint32 objects_removed_count = 4;
+}
+
+// Request message for RuntimeService.GetProjectAccess
+message GetProjectAccessRequest {
+  string instance_id = 1 [(validate.rules).string = {pattern: "^[_\\-a-zA-Z0-9]+$"}];
+}
+
+// Response message for RuntimeService.GetProjectAccess
+message GetProjectAccessResponse {
+  ProjectAccess project_access = 1;
+}
+
+message ProjectAccess {
+  repeated Claims claims = 1;
+  string default_model_access = 2;
+}
+
+message Claims {
+  string name = 1;
+  string type = 2;
+  string default = 3;
+  repeated string options = 4;
 }
 
 // **********

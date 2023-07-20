@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/rilldata/rill/runtime/server"
+	"github.com/rilldata/rill/runtime/server/auth"
 	"io"
 	"strings"
 
@@ -59,6 +61,39 @@ func (q *MetricsViewToplist) UnmarshalResult(v any) error {
 }
 
 func (q *MetricsViewToplist) Resolve(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+	mv, err := lookupMetricsView(ctx, rt, instanceID, q.MetricsViewName)
+	if err != nil {
+		return err
+	}
+	return q.resolve(ctx, rt, mv, instanceID, priority, "")
+}
+
+func (q *MetricsViewToplist) ResolveRestricted(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+	mv, err := lookupMetricsView(ctx, rt, instanceID, q.MetricsViewName)
+	if err != nil {
+		return err
+	}
+
+	if auth.GetClaims(ctx).IsRestrictedRole() {
+		// Check if the backing model has access policy
+
+		modelMeta, err := runtime.LookupModelMeta(ctx, rt, instanceID, mv.Model+"_meta")
+		if err != nil {
+			return err
+		}
+
+		evaluatedModel := auth.GetClaims(ctx).Evaluate(modelMeta, "restricted")
+
+		// role should come from the runtime request
+		if !evaluatedModel.Access {
+			return server.ErrForbidden
+		}
+		return q.resolve(ctx, rt, mv, instanceID, priority, evaluatedModel.Filter)
+	}
+	return q.resolve(ctx, rt, mv, instanceID, priority, "")
+}
+
+func (q *MetricsViewToplist) resolve(ctx context.Context, rt *runtime.Runtime, mv *runtimev1.MetricsView, instanceID string, priority int, filter string) error {
 	olap, err := rt.OLAP(ctx, instanceID)
 	if err != nil {
 		return err
@@ -68,17 +103,12 @@ func (q *MetricsViewToplist) Resolve(ctx context.Context, rt *runtime.Runtime, i
 		return fmt.Errorf("not available for dialect '%s'", olap.Dialect())
 	}
 
-	mv, err := lookupMetricsView(ctx, rt, instanceID, q.MetricsViewName)
-	if err != nil {
-		return err
-	}
-
 	if mv.TimeDimension == "" && (q.TimeStart != nil || q.TimeEnd != nil) {
 		return fmt.Errorf("metrics view '%s' does not have a time dimension", q.MetricsViewName)
 	}
 
 	// Build query
-	sql, args, err := q.buildMetricsTopListSQL(mv, olap.Dialect())
+	sql, args, err := q.buildMetricsTopListSQL(mv, olap.Dialect(), filter)
 	if err != nil {
 		return fmt.Errorf("error building query: %w", err)
 	}
@@ -115,7 +145,7 @@ func (q *MetricsViewToplist) Export(ctx context.Context, rt *runtime.Runtime, in
 	return nil
 }
 
-func (q *MetricsViewToplist) buildMetricsTopListSQL(mv *runtimev1.MetricsView, dialect drivers.Dialect) (string, []any, error) {
+func (q *MetricsViewToplist) buildMetricsTopListSQL(mv *runtimev1.MetricsView, dialect drivers.Dialect, filter string) (string, []any, error) {
 	ms, err := resolveMeasures(mv, q.InlineMeasures, q.MeasureNames)
 	if err != nil {
 		return "", nil, err
@@ -152,6 +182,10 @@ func (q *MetricsViewToplist) buildMetricsTopListSQL(mv *runtimev1.MetricsView, d
 		}
 		whereClause += " " + clause
 		args = append(args, clauseArgs...)
+	}
+
+	if filter != "" {
+		whereClause += " AND " + filter
 	}
 
 	sortingCriteria := make([]string, 0, len(q.Sort))

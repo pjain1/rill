@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/rilldata/rill/runtime/server"
+	"github.com/rilldata/rill/runtime/server/auth"
 	"io"
 	"strings"
 	"time"
@@ -66,7 +68,35 @@ func (q *MetricsViewTimeSeries) Resolve(ctx context.Context, rt *runtime.Runtime
 	if err != nil {
 		return err
 	}
+	return q.resolve(ctx, rt, mv, instanceID, priority, "")
+}
 
+func (q *MetricsViewTimeSeries) ResolveRestricted(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+	mv, err := lookupMetricsView(ctx, rt, instanceID, q.MetricsViewName)
+	if err != nil {
+		return err
+	}
+
+	if auth.GetClaims(ctx).IsRestrictedRole() {
+		// Check if the backing model has access policy
+
+		modelMeta, err := runtime.LookupModelMeta(ctx, rt, instanceID, mv.Model+"_meta")
+		if err != nil {
+			return err
+		}
+
+		evaluatedModel := auth.GetClaims(ctx).Evaluate(modelMeta, "restricted")
+
+		// role should come from the runtime request
+		if !evaluatedModel.Access {
+			return server.ErrForbidden
+		}
+		return q.resolve(ctx, rt, mv, instanceID, priority, evaluatedModel.Filter)
+	}
+	return q.resolve(ctx, rt, mv, instanceID, priority, "")
+}
+
+func (q *MetricsViewTimeSeries) resolve(ctx context.Context, rt *runtime.Runtime, mv *runtimev1.MetricsView, instanceID string, priority int, filter string) error {
 	if mv.TimeDimension == "" {
 		return fmt.Errorf("metrics view '%s' does not have a time dimension", q.MetricsViewName)
 	}
@@ -80,7 +110,7 @@ func (q *MetricsViewTimeSeries) Resolve(ctx context.Context, rt *runtime.Runtime
 	case drivers.DialectDuckDB:
 		return q.resolveDuckDB(ctx, rt, instanceID, mv, priority)
 	case drivers.DialectDruid:
-		return q.resolveDruid(ctx, olap, mv, priority)
+		return q.resolveDruid(ctx, olap, mv, priority, filter)
 	default:
 		return fmt.Errorf("not available for dialect '%s'", olap.Dialect())
 	}
@@ -139,8 +169,8 @@ func toColumnTimeseriesMeasures(measures []*runtimev1.MetricsView_Measure) ([]*r
 	return res, nil
 }
 
-func (q *MetricsViewTimeSeries) resolveDruid(ctx context.Context, olap drivers.OLAPStore, mv *runtimev1.MetricsView, priority int) error {
-	sql, tsAlias, args, err := q.buildDruidMetricsTimeseriesSQL(mv)
+func (q *MetricsViewTimeSeries) resolveDruid(ctx context.Context, olap drivers.OLAPStore, mv *runtimev1.MetricsView, priority int, filter string) error {
+	sql, tsAlias, args, err := q.buildDruidMetricsTimeseriesSQL(mv, filter)
 	if err != nil {
 		return fmt.Errorf("error building query: %w", err)
 	}
@@ -205,7 +235,7 @@ func (q *MetricsViewTimeSeries) resolveDruid(ctx context.Context, olap drivers.O
 	return nil
 }
 
-func (q *MetricsViewTimeSeries) buildDruidMetricsTimeseriesSQL(mv *runtimev1.MetricsView) (string, string, []any, error) {
+func (q *MetricsViewTimeSeries) buildDruidMetricsTimeseriesSQL(mv *runtimev1.MetricsView, filter string) (string, string, []any, error) {
 	ms, err := resolveMeasures(mv, q.InlineMeasures, q.MeasureNames)
 	if err != nil {
 		return "", "", nil, err
@@ -235,6 +265,10 @@ func (q *MetricsViewTimeSeries) buildDruidMetricsTimeseriesSQL(mv *runtimev1.Met
 		}
 		whereClause += " " + clause
 		args = append(args, clauseArgs...)
+	}
+
+	if filter != "" {
+		whereClause += " AND " + filter
 	}
 
 	tsAlias := tempName("_ts_")

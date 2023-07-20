@@ -78,6 +78,22 @@ message Model {
   bool materialize = 5;
 }
 
+message ModelMeta {
+  ModelAccess access = 1;
+}
+
+message ModelAccess {
+  string condition = 1; // model access condition
+  string filter = 2; // row level filter expression
+  repeated ColumnAccess columns = 3; // column level access
+}
+
+message ColumnAccess {
+  string condition = 1; // column access condition
+  string name = 2; // column name
+  bool include = 3; // include or exclude
+}
+
 // Metrics view is the internal representation of a metrics view definition
 message MetricsView {
   // Dimensions are columns to filter and group by

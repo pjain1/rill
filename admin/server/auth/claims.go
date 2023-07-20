@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/rilldata/rill/admin"
@@ -185,6 +186,50 @@ func (c *authTokenClaims) ProjectPermissions(ctx context.Context, orgID, project
 	composite := &adminv1.ProjectPermissions{}
 	for _, role := range roles {
 		composite = unionProjectRoles(composite, role)
+	}
+
+	// Resolve restricted roles for the project
+	restrictedProjectRoles, err := c.admin.DB.ResolveRestrictedProjectRolesForUser(ctx, c.token.OwnerID(), projectID)
+	if err != nil {
+		panic(fmt.Errorf("failed to get restricted project roles: %w", err))
+	}
+
+	if len(restrictedProjectRoles) > 0 {
+		// fetch user info
+		user, err := c.admin.DB.FindUser(ctx, c.token.OwnerID())
+		if err != nil {
+			panic(fmt.Errorf("failed to get user info: %w", err))
+		}
+
+		// TODO namespace role attributes and user attributes
+		composite.RestrictedRoles = make([]*adminv1.RestrictedRole, len(restrictedProjectRoles))
+		for i, role := range restrictedProjectRoles {
+			// add user level attributes like email, domain to all restricted roles
+			attr := make([]*adminv1.RestrictedRoleAttribute, len(role.Attributes)+2)
+			attr[0] = &adminv1.RestrictedRoleAttribute{
+				Key:   "email",
+				Value: user.Email,
+			}
+			attr[1] = &adminv1.RestrictedRoleAttribute{
+				Key:   "domain",
+				Value: user.Email[strings.LastIndex(user.Email, "@")+1:],
+			}
+			attrIndex := 2
+			for k, v := range role.Attributes {
+				attr[attrIndex] = &adminv1.RestrictedRoleAttribute{
+					Key:   k,
+					Value: v,
+				}
+				attrIndex++
+			}
+			composite.RestrictedRoles[i] = &adminv1.RestrictedRole{
+				Name:       role.Name,
+				Attributes: attr,
+			}
+		}
+		// hacky requirement to be set for restricted roles to work
+		composite.ReadProject = true
+		composite.ReadProd = true
 	}
 
 	c.projectPermissionsCache[projectID] = composite

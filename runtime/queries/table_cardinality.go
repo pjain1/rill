@@ -3,6 +3,8 @@ package queries
 import (
 	"context"
 	"fmt"
+	"github.com/rilldata/rill/runtime/server"
+	"github.com/rilldata/rill/runtime/server/auth"
 	"io"
 	"reflect"
 
@@ -43,8 +45,36 @@ func (q *TableCardinality) UnmarshalResult(v any) error {
 }
 
 func (q *TableCardinality) Resolve(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
-	countSQL := fmt.Sprintf("SELECT count(*) AS count FROM %s",
+	return q.resolve(ctx, rt, instanceID, priority, "")
+}
+
+func (q *TableCardinality) ResolveRestricted(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+	if auth.GetClaims(ctx).IsRestrictedRole() {
+		// Check if the backing model has access policy
+
+		modelMeta, err := runtime.LookupModelMeta(ctx, rt, instanceID, q.TableName+"_meta")
+		if err != nil {
+			return err
+		}
+
+		evaluatedModel := auth.GetClaims(ctx).Evaluate(modelMeta, "restricted")
+
+		// role should come from the runtime request
+		if !evaluatedModel.Access {
+			return server.ErrForbidden
+		}
+		return q.resolve(ctx, rt, instanceID, priority, evaluatedModel.Filter)
+	}
+	return q.resolve(ctx, rt, instanceID, priority, "")
+}
+
+func (q *TableCardinality) resolve(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int, filter string) error {
+	if filter != "" {
+		filter = " WHERE " + filter
+	}
+	countSQL := fmt.Sprintf("SELECT count(*) AS count FROM %s %s",
 		safeName(q.TableName),
+		filter,
 	)
 
 	olap, err := rt.OLAP(ctx, instanceID)

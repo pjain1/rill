@@ -133,6 +133,7 @@ func (s *Server) GetProject(ctx context.Context, req *adminv1.GetProjectRequest)
 				runtimeauth.ReadRepo,
 			},
 		},
+		RestrictedRoles: permissions.RestrictedRoles,
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not issue jwt: %s", err.Error())

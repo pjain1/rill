@@ -3,6 +3,8 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"io"
 	"strings"
 
@@ -45,10 +47,20 @@ type Query interface {
 	Export(ctx context.Context, rt *Runtime, instanceID string, priority int, format runtimev1.ExportFormat, w io.Writer) error
 }
 
+type RestrictedQuery interface {
+	// ResolveRestricted TODO add role parameter
+	ResolveRestricted(ctx context.Context, rt *Runtime, instanceID string, priority int) error
+}
+
 func (r *Runtime) Query(ctx context.Context, instanceID string, query Query, priority int) error {
+	restrictedQuery, isRestrictedImpl := query.(RestrictedQuery)
+
 	// If key is empty, skip caching
 	qk := query.Key()
 	if qk == "" {
+		if isRestrictedImpl {
+			return restrictedQuery.ResolveRestricted(ctx, r, instanceID, priority)
+		}
 		return query.Resolve(ctx, r, instanceID, priority)
 	}
 
@@ -59,6 +71,9 @@ func (r *Runtime) Query(ctx context.Context, instanceID string, query Query, pri
 		return err
 	}
 	if inst.OLAPDriver == "druid" {
+		if isRestrictedImpl {
+			return restrictedQuery.ResolveRestricted(ctx, r, instanceID, priority)
+		}
 		return query.Resolve(ctx, r, instanceID, priority)
 	}
 
@@ -110,7 +125,12 @@ func (r *Runtime) Query(ctx context.Context, instanceID string, query Query, pri
 		}
 
 		// Load
-		err := query.Resolve(ctx, r, instanceID, priority)
+		var err error
+		if isRestrictedImpl {
+			err = restrictedQuery.ResolveRestricted(ctx, r, instanceID, priority)
+		} else {
+			err = query.Resolve(ctx, r, instanceID, priority)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -188,4 +208,17 @@ func queryName(q Query) string {
 	nameWithPkg := fmt.Sprintf("%T", q)
 	_, after, _ := strings.Cut(nameWithPkg, ".")
 	return after
+}
+
+func LookupModelMeta(ctx context.Context, rt *Runtime, instanceID, name string) (*runtimev1.ModelMeta, error) {
+	obj, err := rt.GetCatalogEntry(ctx, instanceID, name)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	if obj.GetModelMeta() == nil {
+		return nil, status.Errorf(codes.NotFound, "object named '%s' is not a model meta", name)
+	}
+
+	return obj.GetModelMeta(), nil
 }

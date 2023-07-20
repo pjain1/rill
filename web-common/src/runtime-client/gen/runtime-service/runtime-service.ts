@@ -46,6 +46,7 @@ import type {
   RuntimeServiceUnpackEmptyBody,
   V1UnpackExampleResponse,
   RuntimeServiceUnpackExampleBody,
+  V1GetProjectAccessResponse,
   V1ReconcileResponse,
   RuntimeServiceReconcileBody,
   V1TriggerSyncResponse,
@@ -1100,6 +1101,67 @@ export const createRuntimeServiceUnpackExample = <
     TContext
   >(mutationFn, mutationOptions);
 };
+/**
+ * @summary GetProjectAccess returns information about project access specified in rill.yaml file
+ */
+export const runtimeServiceGetProjectAccess = (
+  instanceId: string,
+  signal?: AbortSignal
+) => {
+  return httpClient<V1GetProjectAccessResponse>({
+    url: `/v1/instances/${instanceId}/project/access`,
+    method: "get",
+    signal,
+  });
+};
+
+export const getRuntimeServiceGetProjectAccessQueryKey = (instanceId: string) =>
+  [`/v1/instances/${instanceId}/project/access`] as const;
+
+export type RuntimeServiceGetProjectAccessQueryResult = NonNullable<
+  Awaited<ReturnType<typeof runtimeServiceGetProjectAccess>>
+>;
+export type RuntimeServiceGetProjectAccessQueryError = RpcStatus;
+
+export const createRuntimeServiceGetProjectAccess = <
+  TData = Awaited<ReturnType<typeof runtimeServiceGetProjectAccess>>,
+  TError = RpcStatus
+>(
+  instanceId: string,
+  options?: {
+    query?: CreateQueryOptions<
+      Awaited<ReturnType<typeof runtimeServiceGetProjectAccess>>,
+      TError,
+      TData
+    >;
+  }
+): CreateQueryResult<TData, TError> & { queryKey: QueryKey } => {
+  const { query: queryOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getRuntimeServiceGetProjectAccessQueryKey(instanceId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof runtimeServiceGetProjectAccess>>
+  > = ({ signal }) => runtimeServiceGetProjectAccess(instanceId, signal);
+
+  const query = createQuery<
+    Awaited<ReturnType<typeof runtimeServiceGetProjectAccess>>,
+    TError,
+    TData
+  >({
+    queryKey,
+    queryFn,
+    enabled: !!instanceId,
+    ...queryOptions,
+  }) as CreateQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  query.queryKey = queryKey;
+
+  return query;
+};
+
 /**
  * @summary Reconcile applies a full set of artifacts from a repo to the catalog and infra.
 It attempts to infer a minimal number of migrations to apply to reconcile the current state with

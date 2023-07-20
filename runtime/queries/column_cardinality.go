@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/rilldata/rill/runtime/server"
+	"github.com/rilldata/rill/runtime/server/auth"
 	"io"
 	"reflect"
 
@@ -45,6 +47,30 @@ func (q *ColumnCardinality) UnmarshalResult(v any) error {
 }
 
 func (q *ColumnCardinality) Resolve(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+	return q.resolve(ctx, rt, instanceID, priority, "")
+}
+
+func (q *ColumnCardinality) ResolveRestricted(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+	if auth.GetClaims(ctx).IsRestrictedRole() {
+		// Check if the backing model has access policy
+
+		modelMeta, err := runtime.LookupModelMeta(ctx, rt, instanceID, q.TableName+"_meta")
+		if err != nil {
+			return err
+		}
+
+		evaluatedModel := auth.GetClaims(ctx).Evaluate(modelMeta, "restricted")
+
+		// role should come from the runtime request
+		if !evaluatedModel.Access {
+			return server.ErrForbidden
+		}
+		return q.resolve(ctx, rt, instanceID, priority, evaluatedModel.Filter)
+	}
+	return q.resolve(ctx, rt, instanceID, priority, "")
+}
+
+func (q *ColumnCardinality) resolve(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int, filter string) error {
 	olap, err := rt.OLAP(ctx, instanceID)
 	if err != nil {
 		return err
@@ -55,6 +81,11 @@ func (q *ColumnCardinality) Resolve(ctx context.Context, rt *runtime.Runtime, in
 	}
 
 	requestSQL := fmt.Sprintf("SELECT approx_count_distinct(%s) as count from %s", safeName(q.ColumnName), safeName(q.TableName))
+
+	if filter != "" {
+		// TODO sanitize column names here ?
+		requestSQL = fmt.Sprintf("%s WHERE %s", requestSQL, filter)
+	}
 
 	rows, err := olap.Execute(ctx, &drivers.Statement{
 		Query:            requestSQL,

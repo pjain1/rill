@@ -607,6 +607,26 @@ paths:
             title: Request message for RuntimeService.UnpackExample
       tags:
         - RuntimeService
+  /v1/instances/{instanceId}/project/access:
+    get:
+      summary: GetProjectAccess returns information about project access specified in rill.yaml file
+      operationId: RuntimeService_GetProjectAccess
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1GetProjectAccessResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: instanceId
+          in: path
+          required: true
+          type: string
+      tags:
+        - RuntimeService
   /v1/instances/{instanceId}/queries/column-cardinality/tables/{tableName}:
     get:
       summary: Get cardinality for a column
@@ -1986,6 +2006,19 @@ definitions:
         type: number
         format: double
     description: Response for QueryService.ColumnTopK and QueryService.ColumnCardinality. Message will have either topK or cardinality set.
+  v1Claims:
+    type: object
+    properties:
+      name:
+        type: string
+      type:
+        type: string
+      default:
+        type: string
+      options:
+        type: array
+        items:
+          type: string
   v1ColumnCardinalityResponse:
     type: object
     properties:
@@ -2236,6 +2269,12 @@ definitions:
       instance:
         $ref: '#/definitions/v1Instance'
     title: Response message for RuntimeService.GetInstance
+  v1GetProjectAccessResponse:
+    type: object
+    properties:
+      projectAccess:
+        $ref: '#/definitions/v1ProjectAccess'
+    title: Response message for RuntimeService.GetProjectAccess
   v1HistogramMethod:
     type: string
     enum:
@@ -2692,6 +2731,16 @@ definitions:
       largestStringLength:
         type: integer
         format: int32
+  v1ProjectAccess:
+    type: object
+    properties:
+      claims:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1Claims'
+      defaultModelAccess:
+        type: string
   v1PutFileAndReconcileRequest:
     type: object
     properties:

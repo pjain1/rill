@@ -23,4 +23,4 @@ func UserCmd(cfg *config.Config) *cobra.Command {
 	return userCmd
 }
 
-var userRoles = []string{"admin", "viewer"}
+var userRoles = []string{"admin", "viewer", "restricted"}

@@ -3,6 +3,8 @@ package queries
 import (
 	"context"
 	"fmt"
+	"github.com/rilldata/rill/runtime/server"
+	"github.com/rilldata/rill/runtime/server/auth"
 	"io"
 
 	runtimev1 "github.com/rilldata/rill/proto/gen/rill/runtime/v1"
@@ -46,6 +48,30 @@ func (q *ColumnTopK) UnmarshalResult(v any) error {
 }
 
 func (q *ColumnTopK) Resolve(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+	return q.resolve(ctx, rt, instanceID, priority, "")
+}
+
+func (q *ColumnTopK) ResolveRestricted(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int) error {
+	if auth.GetClaims(ctx).IsRestrictedRole() {
+		// Check if the backing model has access policy
+
+		modelMeta, err := runtime.LookupModelMeta(ctx, rt, instanceID, q.TableName+"_meta")
+		if err != nil {
+			return err
+		}
+
+		evaluatedModel := auth.GetClaims(ctx).Evaluate(modelMeta, "restricted")
+
+		// role should come from the runtime request
+		if !evaluatedModel.Access {
+			return server.ErrForbidden
+		}
+		return q.resolve(ctx, rt, instanceID, priority, evaluatedModel.Filter)
+	}
+	return q.resolve(ctx, rt, instanceID, priority, "")
+}
+
+func (q *ColumnTopK) resolve(ctx context.Context, rt *runtime.Runtime, instanceID string, priority int, filter string) error {
 	// Get OLAP connection
 	olap, err := rt.OLAP(ctx, instanceID)
 	if err != nil {
@@ -57,11 +83,16 @@ func (q *ColumnTopK) Resolve(ctx context.Context, rt *runtime.Runtime, instanceI
 		return fmt.Errorf("not available for dialect '%s'", olap.Dialect())
 	}
 
+	if filter != "" {
+		filter = "WHERE " + filter
+	}
+
 	// Build SQL
-	qry := fmt.Sprintf("SELECT %s AS value, %s AS count FROM %s GROUP BY %s ORDER BY count DESC, value ASC LIMIT %d",
+	qry := fmt.Sprintf("SELECT %s AS value, %s AS count FROM %s %s GROUP BY %s ORDER BY count DESC, value ASC LIMIT %d",
 		safeName(q.ColumnName),
 		q.Agg,
 		safeName(q.TableName),
+		filter,
 		safeName(q.ColumnName),
 		q.K,
 	)

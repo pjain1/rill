@@ -314,7 +314,7 @@ describe("dashboards", () => {
     await measuresTable
       .getByRole("row")
       .nth(1)
-      .getByRole("textbox", { name: "Measure expression" })
+      .getByRole("textbox", { name: "Measure evaluate" })
       .fill("count(*)");
 
     // Check Quick Metrics button visible
@@ -336,7 +336,7 @@ describe("dashboards", () => {
     await measuresTable
       .getByRole("row")
       .nth(2)
-      .getByRole("textbox", { name: "Measure expression" })
+      .getByRole("textbox", { name: "Measure evaluate" })
       .fill("avg(bid_price)");
 
     await measuresTable

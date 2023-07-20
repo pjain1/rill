@@ -219,7 +219,7 @@ func (s *Server) MetricsViewRows(ctx context.Context, req *runtimev1.MetricsView
 func validateInlineMeasures(ms []*runtimev1.InlineMeasure) error {
 	for _, im := range ms {
 		if !strings.EqualFold(im.Expression, "COUNT(*)") {
-			return fmt.Errorf("illegal inline measure expression: %q", im.Expression)
+			return fmt.Errorf("illegal inline measure evaluate: %q", im.Expression)
 		}
 	}
 	return nil

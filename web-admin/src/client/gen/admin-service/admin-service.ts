@@ -39,7 +39,7 @@ import type {
   V1RemoveOrganizationMemberResponse,
   AdminServiceRemoveOrganizationMemberParams,
   V1SetOrganizationMemberRoleResponse,
-  AdminServiceSetOrganizationMemberRoleBodyBody,
+  AdminServiceSetOrganizationMemberRoleBody,
   V1LeaveOrganizationResponse,
   V1GetGitCredentialsResponse,
   V1ListProjectInvitesResponse,
@@ -49,6 +49,10 @@ import type {
   V1AddProjectMemberResponse,
   V1RemoveProjectMemberResponse,
   V1SetProjectMemberRoleResponse,
+  AdminServiceSetProjectMemberRoleBody,
+  AdminServiceAddRestrictedProjectMemberBody,
+  V1CreateProjectRestrictedRoleResponse,
+  AdminServiceCreateProjectRestrictedRoleBody,
   V1ListWhitelistedDomainsResponse,
   V1CreateWhitelistedDomainResponse,
   AdminServiceCreateWhitelistedDomainBody,
@@ -827,13 +831,13 @@ export const createAdminServiceRemoveOrganizationMember = <
 export const adminServiceSetOrganizationMemberRole = (
   organization: string,
   email: string,
-  adminServiceSetOrganizationMemberRoleBodyBody: AdminServiceSetOrganizationMemberRoleBodyBody
+  adminServiceSetOrganizationMemberRoleBody: AdminServiceSetOrganizationMemberRoleBody
 ) => {
   return httpClient<V1SetOrganizationMemberRoleResponse>({
     url: `/v1/organizations/${organization}/members/${email}`,
     method: "put",
     headers: { "Content-Type": "application/json" },
-    data: adminServiceSetOrganizationMemberRoleBodyBody,
+    data: adminServiceSetOrganizationMemberRoleBody,
   });
 };
 
@@ -841,7 +845,7 @@ export type AdminServiceSetOrganizationMemberRoleMutationResult = NonNullable<
   Awaited<ReturnType<typeof adminServiceSetOrganizationMemberRole>>
 >;
 export type AdminServiceSetOrganizationMemberRoleMutationBody =
-  AdminServiceSetOrganizationMemberRoleBodyBody;
+  AdminServiceSetOrganizationMemberRoleBody;
 export type AdminServiceSetOrganizationMemberRoleMutationError = RpcStatus;
 
 export const createAdminServiceSetOrganizationMemberRole = <
@@ -854,7 +858,7 @@ export const createAdminServiceSetOrganizationMemberRole = <
     {
       organization: string;
       email: string;
-      data: AdminServiceSetOrganizationMemberRoleBodyBody;
+      data: AdminServiceSetOrganizationMemberRoleBody;
     },
     TContext
   >;
@@ -866,7 +870,7 @@ export const createAdminServiceSetOrganizationMemberRole = <
     {
       organization: string;
       email: string;
-      data: AdminServiceSetOrganizationMemberRoleBodyBody;
+      data: AdminServiceSetOrganizationMemberRoleBody;
     }
   > = (props) => {
     const { organization, email, data } = props ?? {};
@@ -880,7 +884,7 @@ export const createAdminServiceSetOrganizationMemberRole = <
     {
       organization: string;
       email: string;
-      data: AdminServiceSetOrganizationMemberRoleBodyBody;
+      data: AdminServiceSetOrganizationMemberRoleBody;
     },
     TContext
   >(mutationFn, mutationOptions);
@@ -1267,13 +1271,13 @@ export const adminServiceSetProjectMemberRole = (
   organization: string,
   project: string,
   email: string,
-  adminServiceSetOrganizationMemberRoleBodyBody: AdminServiceSetOrganizationMemberRoleBodyBody
+  adminServiceSetProjectMemberRoleBody: AdminServiceSetProjectMemberRoleBody
 ) => {
   return httpClient<V1SetProjectMemberRoleResponse>({
     url: `/v1/organizations/${organization}/projects/${project}/members/${email}`,
     method: "put",
     headers: { "Content-Type": "application/json" },
-    data: adminServiceSetOrganizationMemberRoleBodyBody,
+    data: adminServiceSetProjectMemberRoleBody,
   });
 };
 
@@ -1281,7 +1285,7 @@ export type AdminServiceSetProjectMemberRoleMutationResult = NonNullable<
   Awaited<ReturnType<typeof adminServiceSetProjectMemberRole>>
 >;
 export type AdminServiceSetProjectMemberRoleMutationBody =
-  AdminServiceSetOrganizationMemberRoleBodyBody;
+  AdminServiceSetProjectMemberRoleBody;
 export type AdminServiceSetProjectMemberRoleMutationError = RpcStatus;
 
 export const createAdminServiceSetProjectMemberRole = <
@@ -1295,7 +1299,7 @@ export const createAdminServiceSetProjectMemberRole = <
       organization: string;
       project: string;
       email: string;
-      data: AdminServiceSetOrganizationMemberRoleBodyBody;
+      data: AdminServiceSetProjectMemberRoleBody;
     },
     TContext
   >;
@@ -1308,7 +1312,7 @@ export const createAdminServiceSetProjectMemberRole = <
       organization: string;
       project: string;
       email: string;
-      data: AdminServiceSetOrganizationMemberRoleBodyBody;
+      data: AdminServiceSetProjectMemberRoleBody;
     }
   > = (props) => {
     const { organization, project, email, data } = props ?? {};
@@ -1323,7 +1327,135 @@ export const createAdminServiceSetProjectMemberRole = <
       organization: string;
       project: string;
       email: string;
-      data: AdminServiceSetOrganizationMemberRoleBodyBody;
+      data: AdminServiceSetProjectMemberRoleBody;
+    },
+    TContext
+  >(mutationFn, mutationOptions);
+};
+/**
+ * @summary AddRestrictedProjectMember adds a member to the project
+ */
+export const adminServiceAddRestrictedProjectMember = (
+  organization: string,
+  project: string,
+  adminServiceAddRestrictedProjectMemberBody: AdminServiceAddRestrictedProjectMemberBody
+) => {
+  return httpClient<V1AddProjectMemberResponse>({
+    url: `/v1/organizations/${organization}/projects/${project}/restricted-members`,
+    method: "post",
+    headers: { "Content-Type": "application/json" },
+    data: adminServiceAddRestrictedProjectMemberBody,
+  });
+};
+
+export type AdminServiceAddRestrictedProjectMemberMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminServiceAddRestrictedProjectMember>>
+>;
+export type AdminServiceAddRestrictedProjectMemberMutationBody =
+  AdminServiceAddRestrictedProjectMemberBody;
+export type AdminServiceAddRestrictedProjectMemberMutationError = RpcStatus;
+
+export const createAdminServiceAddRestrictedProjectMember = <
+  TError = RpcStatus,
+  TContext = unknown
+>(options?: {
+  mutation?: CreateMutationOptions<
+    Awaited<ReturnType<typeof adminServiceAddRestrictedProjectMember>>,
+    TError,
+    {
+      organization: string;
+      project: string;
+      data: AdminServiceAddRestrictedProjectMemberBody;
+    },
+    TContext
+  >;
+}) => {
+  const { mutation: mutationOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminServiceAddRestrictedProjectMember>>,
+    {
+      organization: string;
+      project: string;
+      data: AdminServiceAddRestrictedProjectMemberBody;
+    }
+  > = (props) => {
+    const { organization, project, data } = props ?? {};
+
+    return adminServiceAddRestrictedProjectMember(organization, project, data);
+  };
+
+  return createMutation<
+    Awaited<ReturnType<typeof adminServiceAddRestrictedProjectMember>>,
+    TError,
+    {
+      organization: string;
+      project: string;
+      data: AdminServiceAddRestrictedProjectMemberBody;
+    },
+    TContext
+  >(mutationFn, mutationOptions);
+};
+/**
+ * @summary CreateProjectRestrictedRole sets the role for the member
+ */
+export const adminServiceCreateProjectRestrictedRole = (
+  organization: string,
+  project: string,
+  adminServiceCreateProjectRestrictedRoleBody: AdminServiceCreateProjectRestrictedRoleBody
+) => {
+  return httpClient<V1CreateProjectRestrictedRoleResponse>({
+    url: `/v1/organizations/${organization}/projects/${project}/roles`,
+    method: "put",
+    headers: { "Content-Type": "application/json" },
+    data: adminServiceCreateProjectRestrictedRoleBody,
+  });
+};
+
+export type AdminServiceCreateProjectRestrictedRoleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminServiceCreateProjectRestrictedRole>>
+>;
+export type AdminServiceCreateProjectRestrictedRoleMutationBody =
+  AdminServiceCreateProjectRestrictedRoleBody;
+export type AdminServiceCreateProjectRestrictedRoleMutationError = RpcStatus;
+
+export const createAdminServiceCreateProjectRestrictedRole = <
+  TError = RpcStatus,
+  TContext = unknown
+>(options?: {
+  mutation?: CreateMutationOptions<
+    Awaited<ReturnType<typeof adminServiceCreateProjectRestrictedRole>>,
+    TError,
+    {
+      organization: string;
+      project: string;
+      data: AdminServiceCreateProjectRestrictedRoleBody;
+    },
+    TContext
+  >;
+}) => {
+  const { mutation: mutationOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminServiceCreateProjectRestrictedRole>>,
+    {
+      organization: string;
+      project: string;
+      data: AdminServiceCreateProjectRestrictedRoleBody;
+    }
+  > = (props) => {
+    const { organization, project, data } = props ?? {};
+
+    return adminServiceCreateProjectRestrictedRole(organization, project, data);
+  };
+
+  return createMutation<
+    Awaited<ReturnType<typeof adminServiceCreateProjectRestrictedRole>>,
+    TError,
+    {
+      organization: string;
+      project: string;
+      data: AdminServiceCreateProjectRestrictedRoleBody;
     },
     TContext
   >(mutationFn, mutationOptions);

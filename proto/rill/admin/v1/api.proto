@@ -164,6 +164,14 @@ service AdminService {
     };
   }
 
+  // AddRestrictedProjectMember adds a member to the project
+  rpc AddRestrictedProjectMember(AddRestrictedProjectMemberRequest) returns (AddProjectMemberResponse) {
+    option (google.api.http) = {
+      post: "/v1/organizations/{organization}/projects/{project}/restricted-members",
+      body: "*"
+    };
+  }
+
   // RemoveProjectMember removes member from the project
   rpc RemoveProjectMember(RemoveProjectMemberRequest) returns (RemoveProjectMemberResponse) {
     option (google.api.http) = {delete: "/v1/organizations/{organization}/projects/{project}/members/{email}"};
@@ -176,6 +184,15 @@ service AdminService {
       body: "*"
     };
   }
+
+  // CreateProjectRestrictedRole sets the role for the member
+  rpc CreateProjectRestrictedRole(CreateProjectRestrictedRoleRequest) returns (CreateProjectRestrictedRoleResponse) {
+    option (google.api.http) = {
+      put: "/v1/organizations/{organization}/projects/{project}/roles",
+      body: "*"
+    };
+  }
+
 
   // GetCurrentUser returns the currently authenticated user (if any)
   rpc GetCurrentUser(GetCurrentUserRequest) returns (GetCurrentUserResponse) {
@@ -571,6 +588,13 @@ message AddProjectMemberRequest {
   string role = 4 [(validate.rules).string.min_len = 1];
 }
 
+message AddRestrictedProjectMemberRequest {
+  string organization = 1 [(validate.rules).string.min_len = 1];
+  string project = 2 [(validate.rules).string.min_len = 1];
+  string email = 3 [(validate.rules).string.email = true];
+  repeated string roles = 4;
+}
+
 message AddProjectMemberResponse {
   bool pending_signup = 1;
 }
@@ -588,9 +612,25 @@ message SetProjectMemberRoleRequest {
   string project = 2 [(validate.rules).string.min_len = 1];
   string email = 3 [(validate.rules).string.email = true];
   string role = 4 [(validate.rules).string.min_len = 1];
+  bool is_restricted = 5;
 }
 
 message SetProjectMemberRoleResponse {}
+
+message CreateProjectRestrictedRoleRequest {
+  string organization = 1 [(validate.rules).string.min_len = 1];
+  string project = 2 [(validate.rules).string.min_len = 1];
+  string role = 3 [(validate.rules).string.min_len = 1];
+  string description = 4;
+  repeated RestrictedRoleAttribute attributes = 5;
+}
+
+message CreateProjectRestrictedRoleResponse {}
+
+message RestrictedRoleAttribute {
+  string key = 1 [(validate.rules).string.min_len = 1];
+  string value = 2;
+}
 
 message GetCurrentUserRequest {}
 
@@ -772,6 +812,12 @@ message ProjectPermissions {
   bool manage_dev = 8;
   bool read_project_members = 9;
   bool manage_project_members = 10;
+  repeated RestrictedRole restricted_roles = 11;
+}
+
+message RestrictedRole {
+  string name = 1;
+  repeated RestrictedRoleAttribute attributes = 2;
 }
 
 message Member {

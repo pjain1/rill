@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"github.com/rilldata/rill/runtime/compilers/rillv1beta"
 	"strings"
 
 	runtimev1 "github.com/rilldata/rill/proto/gen/rill/runtime/v1"
@@ -220,6 +221,52 @@ func (s *Server) TriggerSync(ctx context.Context, req *runtimev1.TriggerSyncRequ
 	// Done
 	// TODO: This should return stats about synced tables. However, it will be refactored into reconcile, so no need to fix this now.
 	return &runtimev1.TriggerSyncResponse{}, nil
+}
+
+// GetProjectAccess implements RuntimeService.
+func (s *Server) GetProjectAccess(ctx context.Context, req *runtimev1.GetProjectAccessRequest) (*runtimev1.GetProjectAccessResponse, error) {
+	observability.AddRequestAttributes(ctx,
+		attribute.String("args.instance_id", req.InstanceId),
+	)
+
+	if !auth.GetClaims(ctx).CanInstance(req.InstanceId, auth.ReadObjects) {
+		return nil, ErrForbidden
+	}
+
+	cat, err := s.runtime.NewCatalogService(ctx, req.InstanceId)
+	if err != nil {
+		return nil, status.Error(codes.Unknown, err.Error())
+	}
+
+	access, err := cat.GetAccess(ctx)
+
+	pb := accessToPB(access)
+
+	return &runtimev1.GetProjectAccessResponse{ProjectAccess: pb}, nil
+}
+
+func accessToPB(in *rillv1beta.Access) *runtimev1.ProjectAccess {
+	claims := make([]*runtimev1.Claims, len(in.Claims))
+	for i, c := range in.Claims {
+		claims[i] = claimsTOPB(c)
+	}
+	return &runtimev1.ProjectAccess{
+		Claims:             claims,
+		DefaultModelAccess: in.DefaultModelAccess,
+	}
+}
+
+func claimsTOPB(in rillv1beta.Claims) *runtimev1.Claims {
+	options := make([]string, len(in.Options))
+	for i, o := range in.Options {
+		options[i] = o
+	}
+	return &runtimev1.Claims{
+		Name:    in.Name,
+		Type:    in.Type,
+		Default: in.Default,
+		Options: options,
+	}
 }
 
 func pbToObjectType(in runtimev1.ObjectType) drivers.ObjectType {

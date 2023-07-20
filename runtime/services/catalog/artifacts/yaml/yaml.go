@@ -4,6 +4,8 @@ package yaml
 import (
 	"context"
 	"errors"
+	runtimev1 "github.com/rilldata/rill/proto/gen/rill/runtime/v1"
+	"github.com/rilldata/rill/runtime/pkg/fileutil"
 	"path/filepath"
 
 	"github.com/rilldata/rill/runtime/drivers"
@@ -36,9 +38,40 @@ func (r *artifact) DeSerialise(ctx context.Context, filePath, blob string, mater
 			return nil, err
 		}
 		return fromMetricsViewArtifact(metrics, filePath)
+	case "models":
+		modelMeta := &ModelMeta{}
+		err := yaml.Unmarshal([]byte(blob), &modelMeta)
+		if err != nil {
+			return nil, err
+		}
+		return fromModelMetaArtifact(modelMeta, filePath)
 	}
 
 	return nil, ErrNotSupported
+}
+
+func fromModelMetaArtifact(meta *ModelMeta, filePath string) (*drivers.CatalogEntry, error) {
+	name := fileutil.Stem(filePath)
+	columnAccess := make([]*runtimev1.ColumnAccess, len(meta.Access.Columns))
+	for i, column := range meta.Access.Columns {
+		columnAccess[i] = &runtimev1.ColumnAccess{
+			Name:      column.Name,
+			Condition: column.Condition,
+			Include:   column.Include,
+		}
+	}
+	return &drivers.CatalogEntry{
+		Type: drivers.ObjectTypeModelMeta,
+		Object: &runtimev1.ModelMeta{
+			Access: &runtimev1.ModelAccess{
+				Condition: meta.Access.Condition,
+				Filter:    meta.Access.Filter,
+				Columns:   columnAccess,
+			},
+		},
+		Name: name + "_meta",
+		Path: filePath,
+	}, nil
 }
 
 func (r *artifact) Serialise(ctx context.Context, catalogObject *drivers.CatalogEntry) (string, error) {

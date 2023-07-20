@@ -232,7 +232,7 @@ func buildFilterClauseForCondition(mv *runtimev1.MetricsView, cond *runtimev1.Me
 	}
 
 	// Add null check
-	// NOTE: DuckDB doesn't handle NULL values in an "IN" expression. They must be checked with a "dim IS [NOT] NULL" clause.
+	// NOTE: DuckDB doesn't handle NULL values in an "IN" evaluate. They must be checked with a "dim IS [NOT] NULL" clause.
 	if inHasNull {
 		clauses = append(clauses, fmt.Sprintf("%s IS %s NULL", name, notKeyword))
 	}
