@@ -489,3 +489,413 @@ func TestValidateQueryAttributes(t *testing.T) {
 		})
 	}
 }
+
+func TestMetricsViewRollups(t *testing.T) {
+	files := map[string]string{
+		`rill.yaml`: ``,
+		`models/m1.sql`: `SELECT 1 AS id, 'a' AS publisher, 'b' AS domain`,
+		`models/rollup_daily.sql`: `SELECT 1 AS id`,
+		`metrics_views/mv1.yaml`: `
+type: metrics_view
+version: 1
+model: m1
+dimensions:
+- name: publisher
+  column: publisher
+- name: domain
+  column: domain
+measures:
+- name: total_impressions
+  expression: "SUM(impressions)"
+- name: total_clicks
+  expression: "SUM(clicks)"
+rollups:
+  - model: rollup_daily
+    time_grain: day
+    dimensions:
+      - publisher
+      - domain
+    measures:
+      - name: total_impressions
+        expression: 'SUM("impressions_sum")'
+      - name: total_clicks
+        expression: 'SUM("clicks_sum")'
+`,
+	}
+
+	ctx := context.Background()
+	repo := makeRepo(t, files)
+	p, err := Parse(ctx, repo, "", "", "duckdb", true)
+	require.NoError(t, err)
+	require.Empty(t, p.Errors)
+
+	// Find the metrics view resource
+	var mvSpec *runtimev1.MetricsViewSpec
+	for _, r := range p.Resources {
+		if r.Name.Kind == ResourceKindMetricsView && r.Name.Name == "mv1" {
+			mvSpec = r.MetricsViewSpec
+			break
+		}
+	}
+	require.NotNil(t, mvSpec)
+	require.Len(t, mvSpec.Rollups, 1)
+
+	rollup := mvSpec.Rollups[0]
+	require.Equal(t, "rollup_daily", rollup.Model)
+	require.Equal(t, runtimev1.TimeGrain_TIME_GRAIN_DAY, rollup.TimeGrain)
+	require.Equal(t, []string{"publisher", "domain"}, rollup.Dimensions)
+	require.Len(t, rollup.Measures, 2)
+	require.Equal(t, "total_impressions", rollup.Measures[0].Name)
+	require.Equal(t, `SUM("impressions_sum")`, rollup.Measures[0].Expression)
+}
+
+func TestMetricsViewRollupsValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		yaml    string
+		wantErr string
+	}{
+		{
+			name: "both model and table",
+			yaml: `
+type: metrics_view
+version: 1
+model: m1
+dimensions:
+- name: publisher
+  column: publisher
+measures:
+- name: count
+  expression: "COUNT(*)"
+rollups:
+  - model: r1
+    table: t1
+    time_grain: day
+    measures:
+      - name: count
+        expression: "SUM(count)"
+`,
+			wantErr: `cannot set both "model" and "table"`,
+		},
+		{
+			name: "missing model and table",
+			yaml: `
+type: metrics_view
+version: 1
+model: m1
+dimensions:
+- name: publisher
+  column: publisher
+measures:
+- name: count
+  expression: "COUNT(*)"
+rollups:
+  - time_grain: day
+    measures:
+      - name: count
+        expression: "SUM(count)"
+`,
+			wantErr: `must set either "model" or "table"`,
+		},
+		{
+			name: "missing time_grain",
+			yaml: `
+type: metrics_view
+version: 1
+model: m1
+dimensions:
+- name: publisher
+  column: publisher
+measures:
+- name: count
+  expression: "COUNT(*)"
+rollups:
+  - model: r1
+    measures:
+      - name: count
+        expression: "SUM(count)"
+`,
+			wantErr: `"time_grain" is required`,
+		},
+		{
+			name: "invalid time_grain",
+			yaml: `
+type: metrics_view
+version: 1
+model: m1
+dimensions:
+- name: publisher
+  column: publisher
+measures:
+- name: count
+  expression: "COUNT(*)"
+rollups:
+  - model: r1
+    time_grain: fortnight
+    measures:
+      - name: count
+        expression: "SUM(count)"
+`,
+			wantErr: `invalid "time_grain"`,
+		},
+		{
+			name: "dimension not in metrics view",
+			yaml: `
+type: metrics_view
+version: 1
+model: m1
+dimensions:
+- name: publisher
+  column: publisher
+measures:
+- name: count
+  expression: "COUNT(*)"
+rollups:
+  - model: r1
+    time_grain: day
+    dimensions:
+      - nonexistent
+    measures:
+      - name: count
+        expression: "SUM(count)"
+`,
+			wantErr: `dimension "nonexistent" does not exist`,
+		},
+		{
+			name: "measure not in metrics view",
+			yaml: `
+type: metrics_view
+version: 1
+model: m1
+dimensions:
+- name: publisher
+  column: publisher
+measures:
+- name: count
+  expression: "COUNT(*)"
+rollups:
+  - model: r1
+    time_grain: day
+    measures:
+      - name: nonexistent
+        expression: "SUM(nonexistent)"
+`,
+			wantErr: `measure "nonexistent" does not exist`,
+		},
+		{
+			name: "missing expression",
+			yaml: `
+type: metrics_view
+version: 1
+model: m1
+dimensions:
+- name: publisher
+  column: publisher
+measures:
+- name: count
+  expression: "COUNT(*)"
+rollups:
+  - model: r1
+    time_grain: day
+    measures:
+      - name: count
+`,
+			wantErr: `"expression" is required`,
+		},
+		{
+			name: "invalid timezone",
+			yaml: `
+type: metrics_view
+version: 1
+model: m1
+dimensions:
+- name: publisher
+  column: publisher
+measures:
+- name: count
+  expression: "COUNT(*)"
+rollups:
+  - model: r1
+    time_grain: day
+    timezone: Not/A_Timezone
+    measures:
+      - name: count
+        expression: "SUM(count)"
+`,
+			wantErr: `invalid "timezone"`,
+		},
+		{
+			name: "projection with table",
+			yaml: `
+type: metrics_view
+version: 1
+model: m1
+dimensions:
+- name: publisher
+  column: publisher
+measures:
+- name: count
+  expression: "COUNT(*)"
+rollups:
+  - is_projection: true
+    table: t1
+    time_grain: day
+    measures:
+      - name: count
+        expression: "SUM(count)"
+`,
+			wantErr: `projection rollups should not specify a separate "model" or "table"`,
+		},
+		{
+			name: "projection with model",
+			yaml: `
+type: metrics_view
+version: 1
+model: m1
+dimensions:
+- name: publisher
+  column: publisher
+measures:
+- name: count
+  expression: "COUNT(*)"
+rollups:
+  - is_projection: true
+    model: r1
+    time_grain: day
+    measures:
+      - name: count
+        expression: "SUM(count)"
+`,
+			wantErr: `projection rollups should not specify a separate "model" or "table"`,
+		},
+		{
+			name: "projection with time_column",
+			yaml: `
+type: metrics_view
+version: 1
+model: m1
+dimensions:
+- name: publisher
+  column: publisher
+measures:
+- name: count
+  expression: "COUNT(*)"
+rollups:
+  - is_projection: true
+    time_column: day_ts
+    time_grain: day
+    measures:
+      - name: count
+        expression: "SUM(count)"
+`,
+			wantErr: `projection rollups should not specify "time_column"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			files := map[string]string{
+				`rill.yaml`:               ``,
+				`models/m1.sql`:           `SELECT 1 AS id`,
+				`metrics_views/mv1.yaml`:  tt.yaml,
+			}
+			ctx := context.Background()
+			repo := makeRepo(t, files)
+			p, err := Parse(ctx, repo, "", "", "duckdb", true)
+			require.NoError(t, err)
+			require.NotEmpty(t, p.Errors)
+			require.Contains(t, p.Errors[0].Message, tt.wantErr)
+		})
+	}
+}
+
+func TestMetricsViewRollupsTimeColumn(t *testing.T) {
+	files := map[string]string{
+		`rill.yaml`:   ``,
+		`models/m1.sql`: `SELECT 1 AS id, 'a' AS publisher`,
+		`models/rollup_daily.sql`: `SELECT 1 AS id`,
+		`metrics_views/mv1.yaml`: `
+type: metrics_view
+version: 1
+model: m1
+dimensions:
+- name: publisher
+  column: publisher
+measures:
+- name: total_impressions
+  expression: "SUM(impressions)"
+rollups:
+  - model: rollup_daily
+    time_grain: day
+    time_column: day_ts
+    dimensions:
+      - publisher
+    measures:
+      - name: total_impressions
+        expression: 'SUM("impressions_sum")'
+`,
+	}
+
+	ctx := context.Background()
+	repo := makeRepo(t, files)
+	p, err := Parse(ctx, repo, "", "", "duckdb", true)
+	require.NoError(t, err)
+	require.Empty(t, p.Errors)
+
+	var mvSpec *runtimev1.MetricsViewSpec
+	for _, r := range p.Resources {
+		if r.Name.Kind == ResourceKindMetricsView && r.Name.Name == "mv1" {
+			mvSpec = r.MetricsViewSpec
+			break
+		}
+	}
+	require.NotNil(t, mvSpec)
+	require.Len(t, mvSpec.Rollups, 1)
+	require.Equal(t, "day_ts", mvSpec.Rollups[0].TimeColumn)
+	require.False(t, mvSpec.Rollups[0].IsProjection)
+}
+
+func TestMetricsViewRollupsProjection(t *testing.T) {
+	files := map[string]string{
+		`rill.yaml`:   ``,
+		`models/m1.sql`: `SELECT 1 AS id, 'a' AS publisher`,
+		`metrics_views/mv1.yaml`: `
+type: metrics_view
+version: 1
+model: m1
+dimensions:
+- name: publisher
+  column: publisher
+measures:
+- name: total_impressions
+  expression: "SUM(impressions)"
+rollups:
+  - is_projection: true
+    time_grain: day
+    dimensions:
+      - publisher
+    measures:
+      - name: total_impressions
+        expression: 'SUM("impressions")'
+`,
+	}
+
+	ctx := context.Background()
+	repo := makeRepo(t, files)
+	p, err := Parse(ctx, repo, "", "", "duckdb", true)
+	require.NoError(t, err)
+	require.Empty(t, p.Errors)
+
+	var mvSpec *runtimev1.MetricsViewSpec
+	for _, r := range p.Resources {
+		if r.Name.Kind == ResourceKindMetricsView && r.Name.Name == "mv1" {
+			mvSpec = r.MetricsViewSpec
+			break
+		}
+	}
+	require.NotNil(t, mvSpec)
+	require.Len(t, mvSpec.Rollups, 1)
+	require.True(t, mvSpec.Rollups[0].IsProjection)
+	require.Empty(t, mvSpec.Rollups[0].Table)
+	require.Empty(t, mvSpec.Rollups[0].Model)
+}

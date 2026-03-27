@@ -1508,6 +1508,11 @@ export class MetricsViewSpec extends Message<MetricsViewSpec> {
    */
   queryAttributes: { [key: string]: string } = {};
 
+  /**
+   * @generated from field: repeated rill.runtime.v1.MetricsViewSpec.RollupTable rollups = 34;
+   */
+  rollups: MetricsViewSpec_RollupTable[] = [];
+
   constructor(data?: PartialMessage<MetricsViewSpec>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1540,6 +1545,7 @@ export class MetricsViewSpec extends Message<MetricsViewSpec> {
     { no: 26, name: "cache_key_sql", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 27, name: "cache_key_ttl_seconds", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 33, name: "query_attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 34, name: "rollups", kind: "message", T: MetricsViewSpec_RollupTable, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetricsViewSpec {
@@ -2110,6 +2116,159 @@ export class MetricsViewSpec_Annotation extends Message<MetricsViewSpec_Annotati
 
   static equals(a: MetricsViewSpec_Annotation | PlainMessage<MetricsViewSpec_Annotation> | undefined, b: MetricsViewSpec_Annotation | PlainMessage<MetricsViewSpec_Annotation> | undefined): boolean {
     return proto3.util.equals(MetricsViewSpec_Annotation, a, b);
+  }
+}
+
+/**
+ * Pre-aggregated rollup tables that can be used to accelerate queries.
+ * The system automatically routes queries to a rollup table when the query can be satisfied from the pre-aggregated data.
+ *
+ * @generated from message rill.runtime.v1.MetricsViewSpec.RollupTable
+ */
+export class MetricsViewSpec_RollupTable extends Message<MetricsViewSpec_RollupTable> {
+  /**
+   * @generated from field: string connector = 1;
+   */
+  connector = "";
+
+  /**
+   * @generated from field: string database = 2;
+   */
+  database = "";
+
+  /**
+   * @generated from field: string database_schema = 3;
+   */
+  databaseSchema = "";
+
+  /**
+   * @generated from field: string table = 4;
+   */
+  table = "";
+
+  /**
+   * @generated from field: string model = 5;
+   */
+  model = "";
+
+  /**
+   * @generated from field: rill.runtime.v1.TimeGrain time_grain = 6;
+   */
+  timeGrain = TimeGrain.UNSPECIFIED;
+
+  /**
+   * @generated from field: repeated string dimensions = 7;
+   */
+  dimensions: string[] = [];
+
+  /**
+   * @generated from field: repeated rill.runtime.v1.MetricsViewSpec.RollupMeasure measures = 8;
+   */
+  measures: MetricsViewSpec_RollupMeasure[] = [];
+
+  /**
+   * IANA timezone the rollup was aggregated in; defaults to UTC
+   *
+   * @generated from field: string timezone = 9;
+   */
+  timezone = "";
+
+  /**
+   * column name for the time dimension in the rollup table (overrides the base time dimension column)
+   *
+   * @generated from field: string time_column = 10;
+   */
+  timeColumn = "";
+
+  /**
+   * if true, query targets the base table; WHERE uses date_trunc for projection matching
+   *
+   * @generated from field: bool is_projection = 11;
+   */
+  isProjection = false;
+
+  constructor(data?: PartialMessage<MetricsViewSpec_RollupTable>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "rill.runtime.v1.MetricsViewSpec.RollupTable";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "connector", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "database", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "database_schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "table", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "model", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "time_grain", kind: "enum", T: proto3.getEnumType(TimeGrain) },
+    { no: 7, name: "dimensions", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 8, name: "measures", kind: "message", T: MetricsViewSpec_RollupMeasure, repeated: true },
+    { no: 9, name: "timezone", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 10, name: "time_column", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 11, name: "is_projection", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetricsViewSpec_RollupTable {
+    return new MetricsViewSpec_RollupTable().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MetricsViewSpec_RollupTable {
+    return new MetricsViewSpec_RollupTable().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MetricsViewSpec_RollupTable {
+    return new MetricsViewSpec_RollupTable().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MetricsViewSpec_RollupTable | PlainMessage<MetricsViewSpec_RollupTable> | undefined, b: MetricsViewSpec_RollupTable | PlainMessage<MetricsViewSpec_RollupTable> | undefined): boolean {
+    return proto3.util.equals(MetricsViewSpec_RollupTable, a, b);
+  }
+}
+
+/**
+ * @generated from message rill.runtime.v1.MetricsViewSpec.RollupMeasure
+ */
+export class MetricsViewSpec_RollupMeasure extends Message<MetricsViewSpec_RollupMeasure> {
+  /**
+   * measure name in the metrics view
+   *
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * SQL expression for re-aggregation (e.g. "SUM(impressions_sum)")
+   *
+   * @generated from field: string expression = 2;
+   */
+  expression = "";
+
+  constructor(data?: PartialMessage<MetricsViewSpec_RollupMeasure>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "rill.runtime.v1.MetricsViewSpec.RollupMeasure";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "expression", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetricsViewSpec_RollupMeasure {
+    return new MetricsViewSpec_RollupMeasure().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MetricsViewSpec_RollupMeasure {
+    return new MetricsViewSpec_RollupMeasure().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MetricsViewSpec_RollupMeasure {
+    return new MetricsViewSpec_RollupMeasure().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MetricsViewSpec_RollupMeasure | PlainMessage<MetricsViewSpec_RollupMeasure> | undefined, b: MetricsViewSpec_RollupMeasure | PlainMessage<MetricsViewSpec_RollupMeasure> | undefined): boolean {
+    return proto3.util.equals(MetricsViewSpec_RollupMeasure, a, b);
   }
 }
 

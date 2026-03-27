@@ -319,9 +319,21 @@ func (e *Executor) Query(ctx context.Context, qry *metricsview.Query, executionT
 		return nil, err
 	}
 
-	ast, err := metricsview.NewAST(e.metricsView, e.security, qry, e.olap.Dialect())
+	// Check if a rollup table can satisfy the query; if so, use a synthetic spec pointing to it
+	mvForAST := e.metricsView
+	rw := e.rewriteQueryForRollup(qry)
+	if rw != nil && rw.spec != nil {
+		mvForAST = rw.spec
+	}
+
+	ast, err := metricsview.NewAST(mvForAST, e.security, qry, e.olap.Dialect())
 	if err != nil {
 		return nil, err
+	}
+
+	// For projection rollups, wrap the time WHERE expression with date_trunc to match the projection definition
+	if rw != nil && rw.timeFilterGrain != runtimev1.TimeGrain_TIME_GRAIN_UNSPECIFIED {
+		ast.SetTimeFilterGrain(rw.timeFilterGrain, rw.timeFilterTZ)
 	}
 
 	ok, err := e.rewriteTwoPhaseComparisons(ctx, qry, ast, ogLimit)

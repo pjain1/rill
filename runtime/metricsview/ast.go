@@ -35,6 +35,11 @@ type AST struct {
 	Query       *Query
 	Dialect     drivers.Dialect
 
+	// TimeFilterGrain, when set, wraps the time WHERE expression with date_trunc.
+	// Used for ClickHouse projection matching.
+	timeFilterGrain runtimev1.TimeGrain
+	timeFilterTZ    string
+
 	// Cached internal state for building the AST
 	underlyingTable     *string
 	underlyingWhere     *ExprNode
@@ -70,6 +75,13 @@ type SelectNode struct {
 	OrderBy              []OrderFieldNode // Fields to order by
 	Limit                *int64           // Limit for the query
 	Offset               *int64           // Offset for the query
+}
+
+// SetTimeFilterGrain sets the grain to wrap the time WHERE expression with date_trunc.
+// Used for ClickHouse projection matching where the WHERE clause must use date_trunc to match the projection definition.
+func (a *AST) SetTimeFilterGrain(grain runtimev1.TimeGrain, tz string) {
+	a.timeFilterGrain = grain
+	a.timeFilterTZ = tz
 }
 
 // HasName checks if the given name is present as either a dimension or measure field in the node.
@@ -1293,6 +1305,17 @@ func (a *AST) getTimeDimensionExpression(tr *TimeRange) (string, error) {
 	expr, err := a.Dialect.MetricsViewDimensionExpression(t)
 	if err != nil {
 		return "", fmt.Errorf("failed to compile time dimension %q expression: %w", t.Name, err)
+	}
+
+	// If a projection grain is set, wrap the expression with date_trunc
+	// so the WHERE clause matches the ClickHouse projection definition.
+	if a.timeFilterGrain != runtimev1.TimeGrain_TIME_GRAIN_UNSPECIFIED {
+		dim := &runtimev1.MetricsViewSpec_Dimension{Expression: expr}
+		expr, err = a.Dialect.DateTruncExpr(dim, a.timeFilterGrain, a.timeFilterTZ,
+			int(a.MetricsView.FirstDayOfWeek), int(a.MetricsView.FirstMonthOfYear))
+		if err != nil {
+			return "", fmt.Errorf("failed to wrap time dimension with date_trunc for projection: %w", err)
+		}
 	}
 
 	return expr, nil

@@ -340,6 +340,26 @@ message MetricsViewSpec {
   // Query attributes that can be templated with user context and used by drivers (e.g., appended to SETTINGS in ClickHouse).
   // Keys and values are stored as templates and will be resolved at query time.
   map<string, string> query_attributes = 33;
+  // Pre-aggregated rollup tables that can be used to accelerate queries.
+  // The system automatically routes queries to a rollup table when the query can be satisfied from the pre-aggregated data.
+  message RollupTable {
+    string connector = 1;
+    string database = 2;
+    string database_schema = 3;
+    string table = 4;
+    string model = 5;
+    TimeGrain time_grain = 6;
+    repeated string dimensions = 7;
+    repeated RollupMeasure measures = 8;
+    string timezone = 9; // IANA timezone the rollup was aggregated in; defaults to UTC
+    string time_column = 10; // column name for the time dimension in the rollup table (overrides the base time dimension column)
+    bool is_projection = 11; // if true, query targets the base table; WHERE uses date_trunc for projection matching
+  }
+  message RollupMeasure {
+    string name = 1;           // measure name in the metrics view
+    string expression = 2;     // SQL expression for re-aggregation (e.g. "SUM(impressions_sum)")
+  }
+  repeated RollupTable rollups = 34;
 }
 
 message SecurityRule {

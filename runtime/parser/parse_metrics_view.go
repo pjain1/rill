@@ -82,6 +82,22 @@ type MetricsViewYAML struct {
 		Connector      string             `yaml:"connector"`
 		Measures       *FieldSelectorYAML `yaml:"measures"`
 	} `yaml:"annotations"`
+	Rollups []*struct {
+		Model          string   `yaml:"model"`
+		Table          string   `yaml:"table"`
+		Connector      string   `yaml:"connector"`
+		Database       string   `yaml:"database"`
+		DatabaseSchema string   `yaml:"database_schema"`
+		TimeGrain      string   `yaml:"time_grain"`
+		Timezone       string   `yaml:"timezone"`
+		TimeColumn     string   `yaml:"time_column"`
+		IsProjection   bool     `yaml:"is_projection"`
+		Dimensions     []string `yaml:"dimensions"`
+		Measures       []*struct {
+			Name       string `yaml:"name"`
+			Expression string `yaml:"expression"`
+		} `yaml:"measures"`
+	} `yaml:"rollups"`
 	Security        *SecurityPolicyYAML
 	QueryAttributes map[string]string `yaml:"query_attributes"`
 	Cache           struct {
@@ -733,6 +749,63 @@ func (p *Parser) parseMetricsView(node *Node) error {
 		}
 	}
 
+	// Validate and add rollup tables as refs
+	for i, rollup := range tmp.Rollups {
+		if rollup == nil {
+			continue
+		}
+		if rollup.Model != "" && rollup.Table != "" {
+			return fmt.Errorf(`rollup[%d]: cannot set both "model" and "table"`, i)
+		}
+		if rollup.IsProjection {
+			if rollup.Model != "" || rollup.Table != "" {
+				return fmt.Errorf(`rollup[%d]: projection rollups should not specify a separate "model" or "table"`, i)
+			}
+			if rollup.TimeColumn != "" {
+				return fmt.Errorf(`rollup[%d]: projection rollups should not specify "time_column" (they use the base time column)`, i)
+			}
+		} else if rollup.Model == "" && rollup.Table == "" {
+			return fmt.Errorf(`rollup[%d]: must set either "model" or "table"`, i)
+		}
+		if rollup.TimeGrain == "" {
+			return fmt.Errorf(`rollup[%d]: "time_grain" is required`, i)
+		}
+		if _, err := parseTimeGrain(rollup.TimeGrain); err != nil {
+			return fmt.Errorf(`rollup[%d]: invalid "time_grain": %w`, i, err)
+		}
+		if rollup.Timezone != "" {
+			if _, err := time.LoadLocation(rollup.Timezone); err != nil {
+				return fmt.Errorf(`rollup[%d]: invalid "timezone" %q: %w`, i, rollup.Timezone, err)
+			}
+		}
+		for _, dimName := range rollup.Dimensions {
+			if _, ok := names[strings.ToLower(dimName)]; !ok {
+				return fmt.Errorf(`rollup[%d]: dimension %q does not exist in the metrics view`, i, dimName)
+			}
+		}
+		for j, m := range rollup.Measures {
+			if m == nil {
+				continue
+			}
+			if m.Name == "" {
+				return fmt.Errorf(`rollup[%d].measures[%d]: "name" is required`, i, j)
+			}
+			nameType, ok := names[strings.ToLower(m.Name)]
+			if !ok || nameType != nameIsMeasure {
+				return fmt.Errorf(`rollup[%d]: measure %q does not exist in the metrics view`, i, m.Name)
+			}
+			if m.Expression == "" {
+				return fmt.Errorf(`rollup[%d].measures[%d]: "expression" is required`, i, j)
+			}
+		}
+
+		if rollup.Model != "" {
+			node.Refs = append(node.Refs, ResourceName{Name: rollup.Model})
+		} else if rollup.Table != "" {
+			node.Refs = append(node.Refs, ResourceName{Name: rollup.Table})
+		}
+	}
+
 	securityRefs, err := inferRefsFromSecurityRules(securityRules)
 	if err != nil {
 		return err
@@ -818,6 +891,37 @@ func (p *Parser) parseMetricsView(node *Node) error {
 			Connector:        annotation.Connector,
 			Measures:         annotationMeasures,
 			MeasuresSelector: annotationMeasuresSelector,
+		})
+	}
+
+	// Convert rollups to proto
+	for _, rollup := range tmp.Rollups {
+		if rollup == nil {
+			continue
+		}
+		tg, _ := parseTimeGrain(rollup.TimeGrain) // already validated above
+		var rollupMeasures []*runtimev1.MetricsViewSpec_RollupMeasure
+		for _, m := range rollup.Measures {
+			if m == nil {
+				continue
+			}
+			rollupMeasures = append(rollupMeasures, &runtimev1.MetricsViewSpec_RollupMeasure{
+				Name:       m.Name,
+				Expression: m.Expression,
+			})
+		}
+		spec.Rollups = append(spec.Rollups, &runtimev1.MetricsViewSpec_RollupTable{
+			Connector:      rollup.Connector,
+			Database:       rollup.Database,
+			DatabaseSchema: rollup.DatabaseSchema,
+			Table:          rollup.Table,
+			Model:          rollup.Model,
+			TimeGrain:      tg,
+			Timezone:       rollup.Timezone,
+			TimeColumn:     rollup.TimeColumn,
+			IsProjection:   rollup.IsProjection,
+			Dimensions:     rollup.Dimensions,
+			Measures:       rollupMeasures,
 		})
 	}
 
