@@ -3,10 +3,7 @@ import { getMessageForPaymentIssues } from "@rilldata/web-admin/features/billing
 import { getMessageForCancelledIssue } from "@rilldata/web-admin/features/billing/issues/getMessageForCancelledIssue";
 import { getMessageForTrialPlan } from "@rilldata/web-admin/features/billing/issues/getMessageForTrialPlan";
 import type { TeamPlanDialogTypes } from "@rilldata/web-admin/features/billing/plans/types";
-import {
-  isProPlan,
-  isTeamPlan,
-} from "@rilldata/web-admin/features/billing/plans/utils";
+import { isTeamPlan } from "@rilldata/web-admin/features/billing/plans/utils";
 import { useCategorisedOrganizationBillingIssues } from "@rilldata/web-admin/features/billing/selectors";
 import { areAllProjectsHibernating } from "@rilldata/web-admin/features/organizations/selectors";
 import type { BannerMessage } from "@rilldata/web-common/lib/event-bus/events";
@@ -86,8 +83,7 @@ export function useBillingIssueMessage(organization: string) {
         orgResp.data?.organization?.billingPlanName
       ) {
         const paymentIssue = getMessageForPaymentIssues(
-          !isTeamPlan(orgResp.data.organization.billingPlanName) &&
-            !isProPlan(orgResp.data.organization.billingPlanName),
+          !isTeamPlan(orgResp.data.organization.billingPlanName),
           categorisedIssuesResp.data.payment,
         );
         // if we do not have any payment related message to show, skip it

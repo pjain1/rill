@@ -5,11 +5,7 @@
     createAdminServiceGetBillingSubscription,
     V1DeploymentStatus,
   } from "@rilldata/web-admin/client";
-  import {
-    isFreePlan,
-    isProPlan,
-    isTrialPlan,
-  } from "@rilldata/web-admin/features/billing/plans/utils";
+  import { isTrialPlan } from "@rilldata/web-admin/features/billing/plans/utils";
   import { extractBranchFromPath } from "@rilldata/web-admin/features/branches/branch-utils";
   import { useDashboardsLastUpdated } from "@rilldata/web-admin/features/dashboards/listing/selectors";
   import { useGithubLastSynced } from "@rilldata/web-admin/features/projects/selectors";
@@ -121,14 +117,13 @@
   // Billing plan detection
   $: subscriptionQuery = createAdminServiceGetBillingSubscription(organization);
   $: planName = $subscriptionQuery?.data?.subscription?.plan?.name ?? "";
-  $: showSlots =
-    isTrialPlan(planName) || isFreePlan(planName) || isProPlan(planName);
+  $: showSlots = isTrialPlan(planName);
 </script>
 
 <OverviewCard title="Deployment">
   <div slot="header-right" class="flex items-center gap-3">
     <!-- TODO: re-add "Upgrade to Pro" link when ready.
-         Gate on: canManage && (isTrialPlan || isFreePlan || isTeamPlan) && !subscriptionQuery.isLoading
+         Gate on: canManage && (isTrialPlan || isTeamPlan) && !subscriptionQuery.isLoading
     -->
     <ProjectClone
       {organization}

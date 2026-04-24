@@ -2,14 +2,10 @@
   import { createAdminServiceGetBillingSubscription } from "@rilldata/web-admin/client";
   import CancelledTeamPlan from "@rilldata/web-admin/features/billing/plans/CancelledTeamPlan.svelte";
   import EnterprisePlan from "@rilldata/web-admin/features/billing/plans/EnterprisePlan.svelte";
-  import FreePlan from "@rilldata/web-admin/features/billing/plans/FreePlan.svelte";
-  import ProPlan from "@rilldata/web-admin/features/billing/plans/ProPlan.svelte";
   import POCPlan from "@rilldata/web-admin/features/billing/plans/POCPlan.svelte";
   import TeamPlan from "@rilldata/web-admin/features/billing/plans/TeamPlan.svelte";
   import TrialPlan from "@rilldata/web-admin/features/billing/plans/TrialPlan.svelte";
   import {
-    isFreePlan,
-    isProPlan,
     isManagedPlan,
     isTeamPlan,
   } from "@rilldata/web-admin/features/billing/plans/utils";
@@ -31,17 +27,10 @@
   $: isTrial = !!$categorisedIssues.data?.trial;
   // ended subscription will have a cancelled issue associated with it
   $: subHasEnded = !!$categorisedIssues.data?.cancelled;
-  $: subIsFreePlan = plan && isFreePlan(plan.name);
-  $: subIsProPlan = plan && isProPlan(plan.name);
   $: subIsTeamPlan = plan && isTeamPlan(plan.name);
   $: subIsManagedPlan = plan && isManagedPlan(plan.name);
   $: subIsEnterprisePlan =
-    plan &&
-    !isTrial &&
-    !subIsFreePlan &&
-    !subIsProPlan &&
-    !subIsTeamPlan &&
-    !subIsManagedPlan;
+    plan && !isTrial && !subIsTeamPlan && !subIsManagedPlan;
 </script>
 
 {#if neverSubbed}
@@ -50,10 +39,6 @@
   <TrialPlan {organization} {subscription} {showUpgradeDialog} {plan} />
 {:else if subHasEnded}
   <CancelledTeamPlan {organization} {showUpgradeDialog} {plan} />
-{:else if subIsFreePlan}
-  <FreePlan {organization} {plan} />
-{:else if subIsProPlan}
-  <ProPlan {organization} {subscription} {plan} />
 {:else if subIsTeamPlan}
   <TeamPlan {organization} {subscription} {plan} />
 {:else if subIsManagedPlan}

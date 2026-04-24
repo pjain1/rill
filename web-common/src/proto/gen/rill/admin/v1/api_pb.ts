@@ -124,16 +124,6 @@ export enum BillingPlanType {
    * @generated from enum value: BILLING_PLAN_TYPE_ENTERPRISE = 4;
    */
   ENTERPRISE = 4,
-
-  /**
-   * @generated from enum value: BILLING_PLAN_TYPE_FREE = 5;
-   */
-  FREE = 5,
-
-  /**
-   * @generated from enum value: BILLING_PLAN_TYPE_PRO = 6;
-   */
-  PRO = 6,
 }
 // Retrieve enum metadata with: proto3.getEnumType(BillingPlanType)
 proto3.util.setEnumType(BillingPlanType, "rill.admin.v1.BillingPlanType", [
@@ -142,8 +132,6 @@ proto3.util.setEnumType(BillingPlanType, "rill.admin.v1.BillingPlanType", [
   { no: 2, name: "BILLING_PLAN_TYPE_TEAM" },
   { no: 3, name: "BILLING_PLAN_TYPE_MANAGED" },
   { no: 4, name: "BILLING_PLAN_TYPE_ENTERPRISE" },
-  { no: 5, name: "BILLING_PLAN_TYPE_FREE" },
-  { no: 6, name: "BILLING_PLAN_TYPE_PRO" },
 ]);
 
 /**
